@@ -19,9 +19,14 @@ export async function middleware(request: NextRequest) {
           return request.cookies.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({ name, value, ...options });
+          // Force a long-lived cookie explicitly rather than trusting
+          // whatever default the library passes in — see the comment in
+          // lib/supabase/client.ts for why this matters for staying signed
+          // in across browser restarts.
+          const persistent: CookieOptions = { ...options, maxAge: options.maxAge ?? 60 * 60 * 24 * 365 };
+          request.cookies.set({ name, value, ...persistent });
           response = NextResponse.next({ request: { headers: request.headers } });
-          response.cookies.set({ name, value, ...options });
+          response.cookies.set({ name, value, ...persistent });
         },
         remove(name: string, options: CookieOptions) {
           request.cookies.set({ name, value: "", ...options });
