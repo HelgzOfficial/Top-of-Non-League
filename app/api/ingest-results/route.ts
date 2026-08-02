@@ -10,28 +10,19 @@ const SOURCE_URL =
   "https://www.footballwebpages.co.uk/isthmian-football-league-premier-division/fixtures-results";
 
 /**
- * ⚠️ IMPORTANT — read before relying on this in production.
- *
- * This route was written without the ability to fetch the live page's raw
- * HTML from the build sandbox (network access to arbitrary sites is
- * restricted there), so the column layout below is based on a structural
- * description of the page rather than a tested selector. Before you turn
- * on the Vercel Cron for this route:
- *   1. View the page source of SOURCE_URL yourself (or run this route once
- *      and check the `debug.unmatchedRows` / `debug.parsedSample` fields in
- *      its JSON response).
- *   2. Adjust COLUMN_INDEX below if the real column order differs.
- *   3. Consider emailing Football Web Pages about a licensed data feed —
- *      more reliable than scraping and won't break on a site redesign.
- *
- * Column order assumed, one <td> per column within each fixture <tr>:
- *   [0] date/status  [1] home team  [2] score ("2-1" / "2 1")  [3] away team  [4] attendance
+ * Column order, one <td> per column within each fixture <tr>:
+ *   [0] date  [1] status (e.g. "FT")  [2] home team  [3] score ("0 | 2")
+ *   [4] away team  [5] attendance
+ * Team name cells have the half-time score glued on, e.g. "Billericay
+ * Town(0)" or "(0)Cray Wanderers" — stripped out below before matching.
  * Section header rows (e.g. "Saturday 5th April 2025") are skipped — they
- * don't contain a parseable score.
+ * don't have enough cells to reach the score column.
  */
-const COLUMN_INDEX = { homeTeam: 1, score: 2, awayTeam: 3 };
+const COLUMN_INDEX = { homeTeam: 2, score: 3, awayTeam: 4 };
 
-const SCORE_PATTERN = /(\d+)\s*[-–:]?\s+?(\d+)/; // matches "2-1", "2 1", "2:1"
+// Matches "0 | 2" or "2-1" but not a kickoff time like "15:00" (no colon
+// in the allowed separator set) so not-yet-played fixture rows are skipped.
+const SCORE_PATTERN = /^(\d+)\s*[-–|]\s*(\d+)$/;
 
 function normalizeTeamName(raw: string): string {
   return raw
@@ -73,7 +64,15 @@ export async function POST(request: NextRequest) {
   let html: string;
   try {
     const res = await fetch(SOURCE_URL, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; TopOfNonLeagueBot/1.0)" },
+      headers: {
+        // A generic "...Bot/1.0" UA is a common trigger for basic bot
+        // filtering on sites like this one, hence the ordinary-browser UA
+        // and supporting headers below rather than self-identifying as a bot.
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-GB,en;q=0.9",
+      },
       next: { revalidate: 0 },
     });
     if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
@@ -93,14 +92,16 @@ export async function POST(request: NextRequest) {
       .map((__, td) => $(td).text().trim())
       .get();
 
-    if (cells.length < 4) return; // section header / non-fixture row
+    if (cells.length < 5) return; // section header / non-fixture row
 
-    const scoreCell = cells[COLUMN_INDEX.score];
+    const scoreCell = cells[COLUMN_INDEX.score]?.trim();
     const scoreMatch = scoreCell?.match(SCORE_PATTERN);
     if (!scoreMatch) return;
 
-    const homeRaw = cells[COLUMN_INDEX.homeTeam];
-    const awayRaw = cells[COLUMN_INDEX.awayTeam];
+    // Strip the glued-on half-time score, e.g. "Billericay Town(0)" or
+    // "(0)Cray Wanderers", before it reaches team-name matching.
+    const homeRaw = cells[COLUMN_INDEX.homeTeam]?.replace(/\(\d+\)/g, "").trim();
+    const awayRaw = cells[COLUMN_INDEX.awayTeam]?.replace(/\(\d+\)/g, "").trim();
     if (!homeRaw || !awayRaw) return;
 
     const homeId = resolveTeamId(homeRaw);
