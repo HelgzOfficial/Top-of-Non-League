@@ -17,8 +17,8 @@ export default function VerifyForm() {
   async function verify(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (code.trim().length !== 6) {
-      setError("Enter the 6-digit code");
+    if (code.trim().length !== 8) {
+      setError("Enter the 8-digit code");
       return;
     }
     setLoading(true);
@@ -45,7 +45,7 @@ export default function VerifyForm() {
         </div>
         <h1 className="text-xl font-extrabold text-center">Enter your code</h1>
         <p className="text-[13px] text-sub text-center mt-2">
-          We sent a 6-digit code to <span className="text-ink font-bold">{email}</span>
+          We sent an 8-digit code to <span className="text-ink font-bold">{email}</span>
         </p>
       </div>
 
@@ -53,11 +53,11 @@ export default function VerifyForm() {
         <input
           type="tel"
           inputMode="numeric"
-          maxLength={6}
+          maxLength={8}
           value={code}
           onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-          placeholder="------"
-          className="w-full px-4 py-4 rounded-smcard border border-lineHi bg-bg2 text-ink text-center text-2xl tracking-[10px] font-bold outline-none focus:border-brandGreen"
+          placeholder="--------"
+          className="w-full px-4 py-4 rounded-smcard border border-lineHi bg-bg2 text-ink text-center text-xl tracking-[6px] font-bold outline-none focus:border-brandGreen"
         />
         {error && <p className="text-red text-xs">{error}</p>}
         <button type="submit" disabled={loading} className="btn-primary w-full py-4 rounded-2xl font-extrabold text-[15px]">
