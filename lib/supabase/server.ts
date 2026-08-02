@@ -22,7 +22,10 @@ export function createClient() {
         },
         set(name: string, value: string, options: CookieOptions) {
           try {
-            cookieStore.set({ name, value, ...options });
+            // Same explicit long-lived maxAge as middleware.ts and
+            // lib/supabase/client.ts — see the comment in client.ts.
+            const persistent: CookieOptions = { ...options, maxAge: options.maxAge ?? 60 * 60 * 24 * 365 };
+            cookieStore.set({ name, value, ...persistent });
           } catch {
             // Called from a Server Component render — safe to ignore as
             // long as middleware.ts is refreshing the session on requests.
