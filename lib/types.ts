@@ -64,7 +64,44 @@ export type StandingsRow = {
   goal_difference: number;
   points: number;
 };
+// The *real* Isthmian Premier Division table, from actual match results —
+// not to be confused with StandingsRow above, which scores managers' picks.
+export type LeagueTableRow = {
+  team_id: string;
+  team_name: string;
+  short_name: string | null;
+  logo_path: string | null;
+  league_slug: string;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goals_for: number;
+  goals_against: number;
+  goal_difference: number;
+  points: number;
+};
 
+// One row per team per played fixture, from that team's own perspective —
+// powers both "previous results for a team" and the form guide.
+export type TeamMatchResult = {
+  fixture_id: string;
+  league_slug: string;
+  gameweek_number: number;
+  team_id: string;
+  opponent_id: string;
+  opponent_name: string;
+  opponent_logo_path: string | null;
+  is_home: boolean;
+  goals_for: number;
+  goals_against: number;
+};
+
+export function matchOutcome(m: Pick<TeamMatchResult, "goals_for" | "goals_against">): "W" | "D" | "L" {
+  if (m.goals_for > m.goals_against) return "W";
+  if (m.goals_for < m.goals_against) return "L";
+  return "D";
+}
 export function initials(name: string): string {
   const cleaned = name.replace("&", "").trim();
   const words = cleaned.split(/\s+/).filter(Boolean);
