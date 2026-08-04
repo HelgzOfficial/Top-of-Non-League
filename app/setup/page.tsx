@@ -50,9 +50,8 @@ export default function SetupPage() {
   return (
     <div className="min-h-screen flex flex-col justify-center px-5 py-10">
       <div className="flex flex-col items-center mb-8">
-        <div className="w-10 h-10 rounded-[11px] bg-gradient-to-br from-brandGreen to-brandGreenDim flex items-center justify-center font-black text-[#06150e] text-[13px] mb-3">
-          TNL
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/icons/icon-192.png" alt="Top of Non League" className="w-10 h-10 rounded-[11px] mb-3" />
         <h1 className="text-xl font-extrabold text-center">Name your team</h1>
         <p className="text-[13px] text-sub text-center mt-2 max-w-[280px]">
           This is how you&apos;ll appear on the Top of Non League table.
