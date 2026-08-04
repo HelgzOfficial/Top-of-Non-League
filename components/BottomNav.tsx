@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { HomeIcon, PickIcon, TeamsIcon, TableIcon, LeagueIcon, ProfileIcon } from "@/components/icons";
 
 const TABS = [
-  { href: "/home", label: "Home" },
-  { href: "/pick", label: "Pick" },
-  { href: "/teams", label: "Teams" },
-  { href: "/table", label: "Table" },
-  { href: "/league", label: "League" },
-  { href: "/profile", label: "Profile" },
+  { href: "/home", label: "Home", Icon: HomeIcon },
+  { href: "/pick", label: "Pick", Icon: PickIcon },
+  { href: "/teams", label: "Teams", Icon: TeamsIcon },
+  { href: "/table", label: "Table", Icon: TableIcon },
+  { href: "/league", label: "League", Icon: LeagueIcon },
+  { href: "/profile", label: "Profile", Icon: ProfileIcon },
 ];
 
 export default function BottomNav() {
@@ -18,7 +19,7 @@ export default function BottomNav() {
   return (
     <div
       className="fixed left-1/2 -translate-x-1/2 bottom-0 w-full max-w-[480px] flex justify-around items-center
-                 px-1.5 pt-2.5 bg-[rgba(14,21,18,0.86)] backdrop-blur-xl border-t border-line z-50"
+                 px-1.5 pt-2.5 bg-[var(--nav-bg)] backdrop-blur-xl border-t border-line z-50"
       style={{ paddingBottom: "calc(10px + var(--safe-bottom))" }}
     >
       {TABS.map((tab) => {
@@ -31,6 +32,7 @@ export default function BottomNav() {
               active ? "text-brandGreen" : "text-subDim"
             }`}
           >
+            <tab.Icon size={20} strokeWidth={active ? 2.1 : 1.8} />
             {tab.label}
           </Link>
         );
