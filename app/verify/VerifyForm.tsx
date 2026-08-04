@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import AppLogo from "@/components/AppLogo";
 
 export default function VerifyForm() {
   const router = useRouter();
@@ -40,8 +41,7 @@ export default function VerifyForm() {
   return (
     <div className="min-h-screen flex flex-col justify-center px-5 py-10">
       <div className="flex flex-col items-center mb-8">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/icons/icon-192.png" alt="Top of Non League" className="w-10 h-10 rounded-[11px] mb-3" />
+        <AppLogo size={40} className="mb-3" />
         <h1 className="text-xl font-extrabold text-center">Enter your code</h1>
         <p className="text-[13px] text-sub text-center mt-2">
           We sent an 8-digit code to <span className="text-ink font-bold">{email}</span>
