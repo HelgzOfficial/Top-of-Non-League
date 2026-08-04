@@ -5,6 +5,40 @@
 :root {
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Dark theme (default). Overridden below under html.light. */
+  --color-bg: #0a0f0d;
+  --color-bg2: #0e1512;
+  --color-card: #131b18;
+  --color-line: rgba(255, 255, 255, 0.07);
+  --color-lineHi: rgba(255, 255, 255, 0.14);
+  --color-ink: #eef3f0;
+  --color-sub: #8ea39a;
+  --color-subDim: #5c6e67;
+
+  --body-bg: radial-gradient(circle at 50% 0%, #10241a 0%, #0a0f0d 45%);
+  --card-border: rgba(244, 192, 74, 0.35);
+  --placeholder-bg: #131b18;
+  --nav-bg: rgba(14, 21, 18, 0.86);
+}
+
+/* Light theme: toggled by adding class="light" to <html> — see
+   ThemeToggle.tsx and the inline no-flash script in layout.tsx. Green stays
+   the same brand accent in both themes; only the base surfaces invert. */
+html.light {
+  --color-bg: #f6f4ec;
+  --color-bg2: #ffffff;
+  --color-card: #ffffff;
+  --color-line: rgba(20, 30, 25, 0.09);
+  --color-lineHi: rgba(20, 30, 25, 0.18);
+  --color-ink: #14201b;
+  --color-sub: #55635c;
+  --color-subDim: #8a9691;
+
+  --body-bg: radial-gradient(circle at 50% 0%, #eaf6ee 0%, #f6f4ec 45%);
+  --card-border: rgba(196, 148, 32, 0.5);
+  --placeholder-bg: #f0eee4;
+  --nav-bg: rgba(255, 255, 255, 0.88);
 }
 
 html,
@@ -14,10 +48,11 @@ body {
 
 body {
   margin: 0;
-  background: radial-gradient(circle at 50% 0%, #10241a 0%, #0a0f0d 45%);
-  color: #eef3f0;
+  background: var(--body-bg);
+  color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 * {
@@ -35,11 +70,14 @@ body {
   position: relative;
 }
 
+/* Every "box" in the app — cards get a gold edge so they stand out against
+   the background in both themes, per the gold-accent request. */
 .card {
-  background: #131b18;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--color-card);
+  border: 1.5px solid var(--card-border);
   border-radius: 18px;
   padding: 18px;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .btn-primary {
