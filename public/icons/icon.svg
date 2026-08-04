@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffe49a"/>
+      <stop offset="45%" stop-color="#f4c04a"/>
+      <stop offset="100%" stop-color="#c8891f"/>
+    </linearGradient>
+    <linearGradient id="goldSoft" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffe49a"/>
+      <stop offset="100%" stop-color="#e8ac33"/>
+    </linearGradient>
+    <radialGradient id="fieldDark" cx="50%" cy="38%" r="75%">
+      <stop offset="0%" stop-color="#1a3d26"/>
+      <stop offset="60%" stop-color="#123320"/>
+      <stop offset="100%" stop-color="#0a2015"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Full-bleed background, safe-zone padded — works whether an OS masks
+       this into a circle/squircle or shows it as-is. -->
+  <rect x="0" y="0" width="512" height="512" fill="url(#fieldDark)"/>
+
+  <g transform="translate(121.7,118.3) scale(0.85)">
+    <g stroke="#0a2015" stroke-width="4" stroke-linejoin="round">
+      <rect x="0"   y="250" width="60" height="60"  fill="url(#goldSoft)"/>
+      <rect x="72"  y="205" width="60" height="105" fill="url(#goldSoft)"/>
+      <rect x="144" y="150" width="60" height="160" fill="url(#goldSoft)"/>
+      <rect x="216" y="90"  width="68" height="220" fill="url(#gold)"/>
+    </g>
+    <g fill="#fff3d6" opacity="0.55">
+      <rect x="0"   y="250" width="60" height="7"/>
+      <rect x="72"  y="205" width="60" height="7"/>
+      <rect x="144" y="150" width="60" height="7"/>
+      <rect x="216" y="90"  width="68" height="8"/>
+    </g>
+    <g transform="translate(180,10)">
+      <path d="M8,66 L26,18 L44,48 L70,4 L96,48 L114,18 L132,66 Z"
+            fill="url(#gold)" stroke="#0a2015" stroke-width="4" stroke-linejoin="round"/>
+      <rect x="4" y="60" width="132" height="24" rx="5"
+            fill="url(#gold)" stroke="#0a2015" stroke-width="4"/>
+      <circle cx="26" cy="18" r="7" fill="#fff3d6" stroke="#0a2015" stroke-width="3"/>
+      <circle cx="70" cy="4"  r="9" fill="#fff3d6" stroke="#0a2015" stroke-width="3"/>
+      <circle cx="114" cy="18" r="7" fill="#fff3d6" stroke="#0a2015" stroke-width="3"/>
+      <circle cx="70" cy="72" r="6" fill="#2ba566" stroke="#0a2015" stroke-width="3"/>
+    </g>
+  </g>
+</svg>
