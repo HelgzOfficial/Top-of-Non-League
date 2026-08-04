@@ -47,6 +47,7 @@ export type Profile = {
   shirt_style: ShirtStyle;
   shirt_color: string;
   shirt_trim_color: string;
+  shirt_number_color: string;
   shirt_number: number | null;
   avatar_path: string | null;
 };
@@ -74,6 +75,7 @@ export type StandingsRow = {
   shirt_color: string;
   shirt_trim_color: string;
   shirt_number: number | null;
+  shirt_number_color: string;
 };
 
 // The *real* Isthmian Premier Division table, from actual match results —
