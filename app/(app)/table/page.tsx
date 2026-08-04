@@ -45,6 +45,7 @@ export default async function TablePage() {
                       style={s.shirt_style}
                       color={s.shirt_color}
                       trimColor={s.shirt_trim_color}
+                      numberColor={s.shirt_number_color}
                       number={s.shirt_number}
                       size={20}
                       className="shrink-0"
