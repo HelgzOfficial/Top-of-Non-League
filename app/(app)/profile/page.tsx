@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { getStandings } from "@/lib/league";
+import type { ShirtStyle } from "@/lib/types";
 import ProfileForm from "./ProfileForm";
+import ShirtEditor from "@/components/ShirtEditor";
+import AvatarUpload from "@/components/AvatarUpload";
 
 export default async function ProfilePage() {
   const supabase = createClient();
@@ -10,18 +13,37 @@ export default async function ProfilePage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("team_name")
+    .select("team_name, shirt_style, shirt_color, shirt_trim_color, shirt_number, avatar_path")
     .eq("id", user!.id)
     .maybeSingle();
 
   const standings = await getStandings(supabase);
   const myRow = standings.find((s) => s.profile_id === user!.id);
 
+  const avatarUrl = profile?.avatar_path
+    ? supabase.storage.from("avatars").getPublicUrl(profile.avatar_path).data.publicUrl
+    : null;
+
   return (
     <div className="px-4 pt-6">
       <h3 className="font-extrabold text-[15px] mb-4">Profile</h3>
 
-      <ProfileForm initialTeamName={profile?.team_name ?? ""} />
+      <div className="card">
+        <AvatarUpload initialUrl={avatarUrl} teamName={profile?.team_name ?? ""} />
+      </div>
+
+      <div className="mt-3.5">
+        <ProfileForm initialTeamName={profile?.team_name ?? ""} />
+      </div>
+
+      <ShirtEditor
+        initial={{
+          shirt_style: (profile?.shirt_style as ShirtStyle) ?? "solid",
+          shirt_color: profile?.shirt_color ?? "#1f8a4c",
+          shirt_trim_color: profile?.shirt_trim_color ?? "#ffffff",
+          shirt_number: profile?.shirt_number ?? null,
+        }}
+      />
 
       <div className="card mt-3.5">
         <Row label="Email" value={user!.email ?? ""} />
