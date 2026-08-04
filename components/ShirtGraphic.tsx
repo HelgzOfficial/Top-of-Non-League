@@ -16,6 +16,7 @@ export default function ShirtGraphic({
   style = "solid",
   color = "#1f8a4c",
   trimColor = "#ffffff",
+  numberColor = "#ffffff",
   number = null,
   size = 64,
   className = "",
@@ -23,6 +24,7 @@ export default function ShirtGraphic({
   style?: ShirtStyle;
   color?: string;
   trimColor?: string;
+  numberColor?: string;
   number?: number | null;
   size?: number;
   className?: string;
@@ -77,7 +79,7 @@ export default function ShirtGraphic({
           textAnchor="middle"
           fontSize="30"
           fontWeight={800}
-          fill="#ffffff"
+          fill={numberColor}
           stroke="rgba(0,0,0,0.45)"
           strokeWidth={0.8}
           style={{ fontFamily: "sans-serif" }}
