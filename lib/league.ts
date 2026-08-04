@@ -6,6 +6,7 @@ import {
   type StandingsRow,
   type LeagueTableRow,
   type TeamMatchResult,
+  type ShirtStyle,
 } from "@/lib/types";
 
 /**
@@ -121,6 +122,7 @@ export async function getAllTeams(supabase: SupabaseClient) {
     .order("name", { ascending: true });
   return data ?? [];
 }
+
 /**
  * The real Isthmian Premier Division table, from actual match results —
  * powers the "Table" section of the League tab. Distinct from
@@ -160,6 +162,26 @@ export async function getAllTeamMatchResults(supabase: SupabaseClient): Promise<
   return data as TeamMatchResult[];
 }
 
+/** Recent form (default: last 5 played matches) for every team, oldest → newest. */
+export function buildFormGuide(
+  allResults: TeamMatchResult[],
+  teams: { id: string; name: string; short_name: string | null; logo_path: string | null }[],
+  count = 5
+) {
+  return teams.map((team) => {
+    const recent = allResults
+      .filter((r) => r.team_id === team.id)
+      .slice(0, count) // allResults is already most-recent-first
+      .reverse(); // oldest → newest, for left-to-right reading
+    return { team, recent };
+  });
+}
+
+/** A single team's full result history, most recent first. */
+export function getTeamMatchHistory(allResults: TeamMatchResult[], teamId: string): TeamMatchResult[] {
+  return allResults.filter((r) => r.team_id === teamId);
+}
+
 /** The full season's fixture list (played and upcoming), grouped by gameweek. */
 export async function getAllFixturesWithGameweek(
   supabase: SupabaseClient
@@ -185,4 +207,41 @@ export async function getAllFixturesWithGameweek(
       result: Array.isArray(f.result) ? f.result[0] ?? null : f.result ?? null,
     }))
     .sort((a: any, b: any) => a.gameweek_number - b.gameweek_number);
+}
+
+/** One manager's locked-in pick for a gameweek, once that gameweek's
+ * deadline has passed — see getGameweekPicks() below. */
+export type GameweekPick = {
+  profile_id: string;
+  team_name: string;
+  shirt_style: ShirtStyle;
+  shirt_color: string;
+  shirt_trim_color: string;
+  shirt_number: number | null;
+  shirt_number_color: string;
+  picked_team_id: string;
+  picked_team_name: string;
+  picked_team_short_name: string | null;
+  picked_team_logo_path: string | null;
+};
+
+/**
+ * Every manager's locked-in pick for a gameweek — but only once that
+ * gameweek's deadline has passed. Backed by the gameweek_picks view
+ * (supabase/migrations/0006_gameweek_picks_reveal.sql), which enforces the
+ * deadline gate at the database level: querying this before the deadline
+ * simply returns nothing, no matter who asks.
+ */
+export async function getGameweekPicks(
+  supabase: SupabaseClient,
+  gameweekId: string
+): Promise<GameweekPick[]> {
+  const { data, error } = await supabase
+    .from("gameweek_picks")
+    .select("*")
+    .eq("gameweek_id", gameweekId);
+
+  if (error || !data) return [];
+
+  return (data as GameweekPick[]).sort((a, b) => a.team_name.localeCompare(b.team_name));
 }
