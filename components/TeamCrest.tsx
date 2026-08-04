@@ -31,7 +31,7 @@ export default function TeamCrest({
   return (
     <span
       className={`rounded-[7px] flex items-center justify-center font-black shrink-0 ${
-        active ? "bg-brandGreen text-[#06150e]" : "bg-gradient-to-br from-[#2a3a33] to-[#182420] text-sub"
+        active ? "bg-brandGreen text-[#06150e]" : "bg-bg2 border border-line text-sub"
       }`}
       style={{ width: size, height: size, fontSize: Math.max(9, size * 0.42) }}
     >
