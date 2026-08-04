@@ -1,56 +1,51 @@
--- =========================================================================
--- Top of Non League — squad number colour
---
--- Adds a separate colour for the number printed on the shirt (previously
--- always plain white), and extends `standings` again so the Table tab's
--- mini shirt renders with the right number colour too.
---
--- Paste this whole file into the Supabase SQL Editor and click Run.
--- Safe to re-run.
--- =========================================================================
+import type { Metadata, Viewport } from "next";
+import Script from "next/script";
+import "./globals.css";
 
-alter table public.profiles
-  add column if not exists shirt_number_color text not null default '#ffffff';
+export const metadata: Metadata = {
+  title: "Top of Non League — Isthmian Premier",
+  description:
+    "Pick one Isthmian Premier Division team each game week and climb the Top of Non League table.",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Top of Non League",
+  },
+};
 
--- Appended at the very end of the select list (same reason as
--- 0004_profile_customization.sql: CREATE OR REPLACE VIEW can only add
--- columns at the end, not insert them in the middle).
-create or replace view public.standings as
-with scored_picks as (
-  select
-    p.profile_id,
-    p.gameweek_id,
-    p.team_id,
-    case when f.home_team_id = p.team_id then r.home_goals else r.away_goals end as goals_for,
-    case when f.home_team_id = p.team_id then r.away_goals else r.home_goals end as goals_against
-  from public.picks p
-  join public.fixtures f
-    on f.gameweek_id = p.gameweek_id
-   and (f.home_team_id = p.team_id or f.away_team_id = p.team_id)
-  join public.results r on r.fixture_id = f.id
-)
-select
-  pr.id as profile_id,
-  pr.team_name,
-  pr.league_slug,
-  count(sp.*)::int as played,
-  count(*) filter (where sp.goals_for > sp.goals_against)::int as won,
-  count(*) filter (where sp.goals_for = sp.goals_against)::int as drawn,
-  count(*) filter (where sp.goals_for < sp.goals_against)::int as lost,
-  coalesce(sum(sp.goals_for), 0)::int as goals_for,
-  coalesce(sum(sp.goals_against), 0)::int as goals_against,
-  coalesce(sum(sp.goals_for) - sum(sp.goals_against), 0)::int as goal_difference,
-  (
-    count(*) filter (where sp.goals_for > sp.goals_against) * 3
-    + count(*) filter (where sp.goals_for = sp.goals_against) * 1
-  )::int as points,
-  pr.shirt_style,
-  pr.shirt_color,
-  pr.shirt_trim_color,
-  pr.shirt_number,
-  pr.shirt_number_color
-from public.profiles pr
-left join scored_picks sp on sp.profile_id = pr.id
-group by
-  pr.id, pr.team_name, pr.league_slug,
-  pr.shirt_style, pr.shirt_color, pr.shirt_trim_color, pr.shirt_number, pr.shirt_number_color;
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0a0f0d",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <head>
+        {/* Applies the saved light/dark choice before first paint, so there's
+            no flash of the wrong theme. Runs before hydration — see
+            ThemeToggle.tsx, which writes this same localStorage key. */}
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`
+            try {
+              if (localStorage.getItem('tnl-theme') === 'light') {
+                document.documentElement.classList.add('light');
+              }
+            } catch (e) {}
+          `}
+        </Script>
+      </head>
+      <body>
+        <div className="app-shell">{children}</div>
+      </body>
+    </html>
+  );
+}
