@@ -83,7 +83,7 @@ export default function AvatarUpload({ initialUrl, teamName }: { initialUrl: str
         <button
           type="button"
           onClick={() => url && setExpanded(true)}
-          className="relative w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-[#2a3a33] to-[#182420] flex items-center justify-center shrink-0"
+          className="relative w-16 h-16 rounded-full overflow-hidden bg-bg2 border border-line flex items-center justify-center shrink-0"
           aria-label={url ? "View profile picture" : "No profile picture set"}
         >
           {url ? (
