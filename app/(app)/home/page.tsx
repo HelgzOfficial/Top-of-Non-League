@@ -108,7 +108,7 @@ export default async function HomePage() {
         )}
       </div>
 
-      <div className="rounded-[22px] p-5 border border-line" style={{ background: "linear-gradient(135deg,#123024,#0d1a15 65%)" }}>
+      <div className="card !rounded-[22px] !p-5">
         <p className="text-[11px] uppercase tracking-wide font-extrabold text-subDim">{profile?.team_name}</p>
         <div className="text-4xl font-black leading-none mt-1">
           {myPos >= 0 ? ordinal(myPos + 1) : "-"}{" "}
@@ -151,7 +151,7 @@ export default async function HomePage() {
 
 function StatBox({ v, k }: { v: string | number; k: string }) {
   return (
-    <div className="bg-white/[0.04] rounded-xl px-2 py-2.5 text-center">
+    <div className="bg-bg2 rounded-xl px-2 py-2.5 text-center">
       <div className="text-[17px] font-extrabold">{v}</div>
       <div className="text-[10px] text-subDim uppercase tracking-wide mt-0.5">{k}</div>
     </div>
