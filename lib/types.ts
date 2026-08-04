@@ -38,10 +38,17 @@ export type FixtureWithTeamsAndResult = Fixture & {
   result: Pick<Result, "home_goals" | "away_goals" | "status"> | null;
 };
 
+export type ShirtStyle = "solid" | "stripes" | "hoops" | "sleeves" | "sash";
+
 export type Profile = {
   id: string;
   team_name: string;
   league_slug: string;
+  shirt_style: ShirtStyle;
+  shirt_color: string;
+  shirt_trim_color: string;
+  shirt_number: number | null;
+  avatar_path: string | null;
 };
 
 export type Pick_ = {
@@ -63,7 +70,12 @@ export type StandingsRow = {
   goals_against: number;
   goal_difference: number;
   points: number;
+  shirt_style: ShirtStyle;
+  shirt_color: string;
+  shirt_trim_color: string;
+  shirt_number: number | null;
 };
+
 // The *real* Isthmian Premier Division table, from actual match results —
 // not to be confused with StandingsRow above, which scores managers' picks.
 export type LeagueTableRow = {
@@ -102,6 +114,7 @@ export function matchOutcome(m: Pick<TeamMatchResult, "goals_for" | "goals_again
   if (m.goals_for < m.goals_against) return "L";
   return "D";
 }
+
 export function initials(name: string): string {
   const cleaned = name.replace("&", "").trim();
   const words = cleaned.split(/\s+/).filter(Boolean);
