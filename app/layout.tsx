@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     "Pick one Isthmian Premier Division team each game week and climb the Top of Non League table.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/icons/icon-192.png",
+    icon: "/icons/icon.svg",
     apple: "/icons/apple-touch-icon.png",
   },
   appleWebApp: {
