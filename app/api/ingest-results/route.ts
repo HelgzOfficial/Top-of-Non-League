@@ -10,6 +10,20 @@ const SOURCE_URL =
   "https://www.footballwebpages.co.uk/isthmian-football-league-premier-division/fixtures-results";
 
 /**
+ * ⚠️ IMPORTANT — read before relying on this in production.
+ *
+ * This route was written without the ability to fetch the live page's raw
+ * HTML from the build sandbox (network access to arbitrary sites is
+ * restricted there), so the column layout below is based on a structural
+ * description of the page rather than a tested selector. Before you turn
+ * on the Vercel Cron for this route:
+ *   1. View the page source of SOURCE_URL yourself (or run this route once
+ *      and check the `debug.unmatchedRows` / `debug.parsedSample` fields in
+ *      its JSON response).
+ *   2. Adjust COLUMN_INDEX below if the real column order differs.
+ *   3. Consider emailing Football Web Pages about a licensed data feed —
+ *      more reliable than scraping and won't break on a site redesign.
+ *
  * Column order, one <td> per column within each fixture <tr>:
  *   [0] date  [1] status (e.g. "FT")  [2] home team  [3] score ("0 | 2")
  *   [4] away team  [5] attendance
@@ -32,9 +46,20 @@ function normalizeTeamName(raw: string): string {
     .trim();
 }
 
-export async function POST(request: NextRequest) {
+function isAuthorized(request: NextRequest): boolean {
   const auth = request.headers.get("authorization");
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (auth === `Bearer ${process.env.CRON_SECRET}`) return true;
+  // Query-param fallback so this can be triggered manually from a plain
+  // browser address bar while testing — a normal browser navigation can't
+  // set a custom Authorization header, so the header-only check above made
+  // the "convenience" GET handler below impossible to actually use from a
+  // browser. Vercel Cron always uses the header form; this is for people.
+  const secretParam = request.nextUrl.searchParams.get("secret");
+  return secretParam !== null && secretParam === process.env.CRON_SECRET;
+}
+
+export async function POST(request: NextRequest) {
+  if (!isAuthorized(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -161,8 +186,10 @@ export async function POST(request: NextRequest) {
   });
 }
 
-// Convenience for manually triggering from a browser while testing —
-// remove or protect further before going live if you'd rather POST-only.
+// Convenience for manually triggering from a browser while testing: visit
+// https://YOUR-DOMAIN/api/ingest-results?secret=YOUR_CRON_SECRET
+// (no terminal/curl needed). Remove or protect further before going live
+// if you'd rather this only ever run via POST from Vercel Cron.
 export async function GET(request: NextRequest) {
   return POST(request);
 }
