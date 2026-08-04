@@ -1,5 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentGameweek, getFixturesForGameweek, getPickCounts, getMyPickForGameweek } from "@/lib/league";
+import {
+  getCurrentGameweek,
+  getFixturesForGameweek,
+  getPickCounts,
+  getMyPickForGameweek,
+  getGameweekPicks,
+} from "@/lib/league";
 import PickBoard from "./PickBoard";
 
 export default async function PickPage() {
@@ -31,6 +37,11 @@ export default async function PickPage() {
 
   const deadlinePassed = Boolean(gameweek.deadline_at && new Date(gameweek.deadline_at) < new Date());
 
+  // Only fetch the reveal once it's actually allowed to show — the
+  // gameweek_picks view itself also enforces this, so this is just to
+  // avoid an unnecessary query while picks are still open.
+  const allPicks = deadlinePassed ? await getGameweekPicks(supabase, gameweek.id) : [];
+
   return (
     <PickBoard
       gameweek={gameweek}
@@ -38,6 +49,7 @@ export default async function PickPage() {
       pickCounts={pickCounts}
       myPick={myPick}
       deadlinePassed={deadlinePassed}
+      allPicks={allPicks}
     />
   );
 }
