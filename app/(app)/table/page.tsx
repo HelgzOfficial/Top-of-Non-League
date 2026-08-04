@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getStandings } from "@/lib/league";
+import ShirtGraphic from "@/components/ShirtGraphic";
 
 export default async function TablePage() {
   const supabase = createClient();
@@ -39,10 +40,22 @@ export default async function TablePage() {
                     s.profile_id === user!.id ? "text-brandGreen" : ""
                   }`}
                 >
-                  {s.team_name}
-                  {s.profile_id === user!.id && (
-                    <span className="text-[10px] text-subDim font-normal"> (you)</span>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    <ShirtGraphic
+                      style={s.shirt_style}
+                      color={s.shirt_color}
+                      trimColor={s.shirt_trim_color}
+                      number={s.shirt_number}
+                      size={20}
+                      className="shrink-0"
+                    />
+                    <span>
+                      {s.team_name}
+                      {s.profile_id === user!.id && (
+                        <span className="text-[10px] text-subDim font-normal"> (you)</span>
+                      )}
+                    </span>
+                  </div>
                 </td>
                 <td className="py-2.5 text-center border-t border-line">{s.played}</td>
                 <td className="py-2.5 text-center border-t border-line">{s.won}</td>
