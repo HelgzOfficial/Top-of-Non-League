@@ -3,7 +3,9 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { FixtureWithTeamsAndResult, Gameweek } from "@/lib/types";
+import type { GameweekPick } from "@/lib/league";
 import TeamCrest from "@/components/TeamCrest";
+import ShirtGraphic from "@/components/ShirtGraphic";
 import { submitPick } from "./actions";
 
 export default function PickBoard({
@@ -12,12 +14,14 @@ export default function PickBoard({
   pickCounts,
   myPick,
   deadlinePassed,
+  allPicks,
 }: {
   gameweek: Gameweek;
   fixtures: FixtureWithTeamsAndResult[];
   pickCounts: Record<string, number>;
   myPick: string | null;
   deadlinePassed: boolean;
+  allPicks: GameweekPick[];
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<string | null>(null);
@@ -78,6 +82,7 @@ export default function PickBoard({
             {gf! - ga!}
           </p>
         </div>
+        <PicksReveal picks={allPicks} gwNumber={gameweek.number} myPick={myPick} />
       </div>
     );
   }
@@ -99,6 +104,23 @@ export default function PickBoard({
             Results will appear here automatically once the fixture is played and ingested.
           </p>
         </div>
+        {deadlinePassed && <PicksReveal picks={allPicks} gwNumber={gameweek.number} myPick={myPick} />}
+      </div>
+    );
+  }
+
+  // --- Deadline passed and this manager never picked ---
+  if (deadlinePassed && !myPick) {
+    return (
+      <div className="px-4 pt-6">
+        <Header gwNumber={gameweek.number} subtitle="Picks are closed for this game week" />
+        <div className="card text-center py-8">
+          <span className="text-[10.5px] font-extrabold px-2.5 py-1 rounded-full text-red bg-red/15">
+            No pick made
+          </span>
+          <p className="text-sub text-sm mt-3">You didn&apos;t lock in a team before the deadline this week.</p>
+        </div>
+        <PicksReveal picks={allPicks} gwNumber={gameweek.number} myPick={myPick} />
       </div>
     );
   }
@@ -106,10 +128,7 @@ export default function PickBoard({
   // --- Choosing ---
   return (
     <div className="px-4 pt-6 pb-6">
-      <Header
-        gwNumber={gameweek.number}
-        subtitle={deadlinePassed ? "Picks are closed for this game week" : "Tap a team from any fixture below"}
-      />
+      <Header gwNumber={gameweek.number} subtitle="Tap a team from any fixture below" />
 
       {fixtures.map((f) => (
         <div key={f.id} className="card mb-2.5 !p-3.5">
@@ -119,7 +138,7 @@ export default function PickBoard({
             logoPath={f.home_team.logo_path}
             allowance={allowance(f.home_team_id)}
             selected={selected === f.home_team_id}
-            disabled={deadlinePassed || allowance(f.home_team_id) <= 0}
+            disabled={allowance(f.home_team_id) <= 0}
             onSelect={() => setSelected(f.home_team_id)}
           />
           <div className="text-center text-[10px] text-subDim font-extrabold tracking-widest my-0.5">
@@ -131,7 +150,7 @@ export default function PickBoard({
             logoPath={f.away_team.logo_path}
             allowance={allowance(f.away_team_id)}
             selected={selected === f.away_team_id}
-            disabled={deadlinePassed || allowance(f.away_team_id) <= 0}
+            disabled={allowance(f.away_team_id) <= 0}
             onSelect={() => setSelected(f.away_team_id)}
           />
         </div>
@@ -139,17 +158,68 @@ export default function PickBoard({
 
       {error && <p className="text-red text-xs text-center mb-2">{error}</p>}
 
-      {!deadlinePassed && (
-        <div className="sticky bottom-[calc(14px+var(--safe-bottom))] mt-2">
-          <button
-            onClick={confirm}
-            disabled={!selected || pending}
-            className="btn-primary w-full py-4 rounded-2xl font-extrabold text-[15px]"
+      <div className="sticky bottom-[calc(14px+var(--safe-bottom))] mt-2">
+        <button
+          onClick={confirm}
+          disabled={!selected || pending}
+          className="btn-primary w-full py-4 rounded-2xl font-extrabold text-[15px]"
+        >
+          {pending ? "Confirming…" : selected ? `Confirm pick` : "Select a team to continue"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Every manager's locked-in team for the gameweek, revealed only once the
+ * deadline's passed — the underlying query returns nothing before then
+ * (see getGameweekPicks in lib/league.ts), so this simply renders whatever
+ * it's handed.
+ */
+function PicksReveal({
+  picks,
+  gwNumber,
+  myPick,
+}: {
+  picks: GameweekPick[];
+  gwNumber: number;
+  myPick: string | null;
+}) {
+  if (picks.length === 0) return null;
+
+  return (
+    <div className="mt-4">
+      <div className="text-[11px] font-extrabold uppercase tracking-wide text-subDim mb-2.5 ml-0.5">
+        This week&apos;s picks — GW{gwNumber}
+      </div>
+      <div className="card !p-0 overflow-hidden">
+        {picks.map((p, i) => (
+          <div
+            key={p.profile_id}
+            className={`flex items-center justify-between gap-2 px-3.5 py-3 ${i > 0 ? "border-t border-line" : ""} ${
+              p.picked_team_id === myPick ? "bg-brandGreen/[0.06]" : ""
+            }`}
           >
-            {pending ? "Confirming…" : selected ? `Confirm pick` : "Select a team to continue"}
-          </button>
-        </div>
-      )}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <ShirtGraphic
+                style={p.shirt_style}
+                color={p.shirt_color}
+                trimColor={p.shirt_trim_color}
+                numberColor={p.shirt_number_color}
+                number={p.shirt_number}
+                size={22}
+                className="shrink-0"
+              />
+              <span className="font-bold text-[13px] truncate">{p.team_name}</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="font-semibold text-[12.5px] text-sub">{p.picked_team_name}</span>
+              <TeamCrest name={p.picked_team_name} logoPath={p.picked_team_logo_path} size={22} />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
