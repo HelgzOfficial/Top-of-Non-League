@@ -87,7 +87,10 @@ export default async function TablePage({
                     s.profile_id === user!.id ? "text-brandGreen" : ""
                   }`}
                 >
-                  <div className="flex items-center gap-1.5">
+                  <Link
+                    href={s.profile_id === user!.id ? "/profile" : `/profile/${s.profile_id}`}
+                    className="flex items-center gap-1.5"
+                  >
                     <ShirtGraphic
                       style={s.shirt_style}
                       color={s.shirt_color}
@@ -103,7 +106,7 @@ export default async function TablePage({
                         <span className="text-[10px] text-subDim font-normal"> (you)</span>
                       )}
                     </span>
-                  </div>
+                  </Link>
                 </td>
                 <td className="py-2.5 text-center border-t border-line">{s.played}</td>
                 <td className="py-2.5 text-center border-t border-line">{s.won}</td>
