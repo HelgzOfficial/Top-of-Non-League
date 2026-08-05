@@ -55,8 +55,24 @@ export default async function ProfilePage() {
         <Row label="League" value="Isthmian Premier Division" />
         <Row label="Game weeks played" value={String(myRow?.played ?? 0)} />
       </div>
-
       {user?.email?.toLowerCase() === "helgzofficial@gmail.com" && (
         <Link
           href="/admin"
           className="card mt-3.5 flex items-center justify-between !py-4"
+        >
+          <span className="font-bold text-[14px]">Admin dashboard</span>
+          <span className="text-subDim">→</span>
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between py-1.5">
+      <span className="text-[13px] text-sub">{label}</span>
+      <span className="text-[13px] font-bold">{value}</span>
+    </div>
+  );
+}
