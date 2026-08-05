@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentGameweek, getFixturesForGameweek, getMyPickForGameweek, getStandings } from "@/lib/league";
 import { ordinal } from "@/lib/types";
+import AppLogo from "@/components/AppLogo";
 
 export default async function HomePage() {
   const supabase = createClient();
@@ -96,8 +97,7 @@ export default async function HomePage() {
     <div className="px-4 pt-6">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-[9px] bg-gradient-to-br from-brandGreen to-brandGreenDim flex items-center justify-center font-black text-[#06150e] text-[10.5px]">
-            TNL
+          <AppLogo size={32} className="rounded-[9px]" />
           </div>
           <span className="font-extrabold text-base">Top of Non League</span>
         </div>
