@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getStandings } from "@/lib/league";
 import type { ShirtStyle } from "@/lib/types";
@@ -54,15 +55,8 @@ export default async function ProfilePage() {
         <Row label="League" value="Isthmian Premier Division" />
         <Row label="Game weeks played" value={String(myRow?.played ?? 0)} />
       </div>
-    </div>
-  );
-}
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between py-1.5">
-      <span className="text-[13px] text-sub">{label}</span>
-      <span className="text-[13px] font-bold">{value}</span>
-    </div>
-  );
-}
+      {user?.email?.toLowerCase() === "helgzofficial@gmail.com" && (
+        <Link
+          href="/admin"
+          className="card mt-3.5 flex items-center justify-between !py-4"
