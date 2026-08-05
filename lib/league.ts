@@ -7,6 +7,7 @@ import {
   type LeagueTableRow,
   type TeamMatchResult,
   type ShirtStyle,
+  type MyLeague,
 } from "@/lib/types";
 
 /**
@@ -244,4 +245,106 @@ export async function getGameweekPicks(
   if (error || !data) return [];
 
   return (data as GameweekPick[]).sort((a, b) => a.team_name.localeCompare(b.team_name));
+}
+/**
+ * Same scoring, same picks, same standings view as getStandings() above —
+ * just filtered down to the members of one private league. There's no
+ * separate scoring path for private leagues; they're a lens on the one
+ * real competition.
+ */
+export async function getLeagueStandings(
+  supabase: SupabaseClient,
+  leagueId: string
+): Promise<StandingsRow[]> {
+  const { data: members } = await supabase
+    .from("league_members")
+    .select("profile_id")
+    .eq("league_id", leagueId);
+
+  const profileIds = (members ?? []).map((m) => m.profile_id as string);
+  if (profileIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("standings")
+    .select("*")
+    .eq("league_slug", LEAGUE_SLUG)
+    .in("profile_id", profileIds);
+
+  if (error || !data) return [];
+
+  return (data as StandingsRow[]).sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (b.goal_difference !== a.goal_difference) return b.goal_difference - a.goal_difference;
+    if (b.goals_for !== a.goals_for) return b.goals_for - a.goals_for;
+    return a.team_name.localeCompare(b.team_name);
+  });
+}
+
+/**
+ * The private leagues the current user belongs to, with a member count for
+ * each — powers the league switcher on the Table tab and the "your
+ * leagues" list on the Leagues page.
+ */
+export async function getMyLeagues(
+  supabase: SupabaseClient,
+  profileId: string
+): Promise<MyLeague[]> {
+  const { data: memberships } = await supabase
+    .from("league_members")
+    .select("league_id")
+    .eq("profile_id", profileId);
+
+  const leagueIds = (memberships ?? []).map((m) => m.league_id as string);
+  if (leagueIds.length === 0) return [];
+
+  const { data: leagues } = await supabase
+    .from("leagues")
+    .select("id, name, join_code, owner_profile_id, created_at")
+    .in("id", leagueIds);
+
+  if (!leagues) return [];
+
+  const results: MyLeague[] = [];
+  for (const l of leagues) {
+    const { count } = await supabase
+      .from("league_members")
+      .select("*", { count: "exact", head: true })
+      .eq("league_id", l.id);
+    results.push({ ...l, member_count: count ?? 0 });
+  }
+
+  return results.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Creates a private league and adds the caller as its first member, in one
+ * atomic step handled server-side by create_league() — see
+ * supabase/migrations/0007_private_leagues.sql for why this can't just be
+ * two plain inserts from here.
+ */
+export async function createLeague(supabase: SupabaseClient, name: string): Promise<MyLeague> {
+  const { data, error } = await supabase.rpc("create_league", { p_name: name }).single();
+  if (error || !data) throw new Error(error?.message ?? "Could not create league");
+  const league = data as { id: string; name: string; join_code: string; owner_profile_id: string; created_at: string };
+  return { ...league, member_count: 1 };
+}
+
+/**
+ * Joins a private league by its short code, via join_league() — see the
+ * same migration for why the lookup has to happen server-side rather than
+ * as a plain select from here.
+ */
+export async function joinLeague(supabase: SupabaseClient, code: string) {
+  const { data, error } = await supabase.rpc("join_league", { p_code: code }).single();
+  if (error || !data) throw new Error(error?.message ?? "No league found with that code");
+  return data as { id: string; name: string; join_code: string };
+}
+
+export async function leaveLeague(supabase: SupabaseClient, leagueId: string, profileId: string) {
+  const { error } = await supabase
+    .from("league_members")
+    .delete()
+    .eq("league_id", leagueId)
+    .eq("profile_id", profileId);
+  if (error) throw new Error(error.message);
 }
