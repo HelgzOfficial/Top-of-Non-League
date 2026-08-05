@@ -133,3 +133,14 @@ export function ordinal(n: number): string {
   const v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
+// A private league: a friend group sharing a filtered view of the same
+// standings everyone else has. Not a separate competition — see
+// supabase/migrations/0007_private_leagues.sql.
+export type MyLeague = {
+  id: string;
+  name: string;
+  join_code: string;
+  owner_profile_id: string;
+  created_at: string;
+  member_count: number;
+};
