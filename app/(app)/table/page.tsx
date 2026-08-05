@@ -87,7 +87,7 @@ export default async function TablePage({
                     s.profile_id === user!.id ? "text-brandGreen" : ""
                   }`}
                 >
-                 <Link
+                  <Link
                     href={s.profile_id === user!.id ? "/profile" : `/profile/${s.profile_id}`}
                     className="flex items-center gap-1.5"
                   >
@@ -101,12 +101,6 @@ export default async function TablePage({
                       className="shrink-0"
                     />
                     <span>
-                      {s.team_name}
-                      {s.profile_id === user!.id && (
-                        <span className="text-[10px] text-subDim font-normal"> (you)</span>
-                      )}
-                    </span>
-                  </Link>
                       {s.team_name}
                       {s.profile_id === user!.id && (
                         <span className="text-[10px] text-subDim font-normal"> (you)</span>
