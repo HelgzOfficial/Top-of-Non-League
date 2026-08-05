@@ -116,46 +116,41 @@ export default function LeaguesPage() {
 
       <form onSubmit={handleJoin} className="card flex flex-col gap-3 mb-4">
         <label className="text-xs font-bold uppercase tracking-wide text-sub">Join a league</label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={joinCode}
-            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-            placeholder="Enter code"
-            maxLength={6}
-            className="flex-1 px-4 py-3 rounded-smcard border border-lineHi bg-bg2 text-ink text-center tracking-[3px] font-bold outline-none focus:border-brandGreen"
-          />
-          <button
-            type="submit"
-            disabled={joining}
-            className="btn-primary px-5 rounded-2xl font-extrabold text-[14px]"
-          >
-            {joining ? "Joining…" : "Join"}
-          </button>
-        </div>
+        <input
+          type="text"
+          value={joinCode}
+          onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+          placeholder="Enter code"
+          maxLength={6}
+          className="w-full px-4 py-3 rounded-smcard border border-lineHi bg-bg2 text-ink text-center tracking-[3px] font-bold outline-none focus:border-brandGreen"
+        />
+        <button
+          type="submit"
+          disabled={joining}
+          className="btn-primary w-full py-3 rounded-2xl font-extrabold text-[14px]"
+        >
+          {joining ? "Joining…" : "Join"}
+        </button>
       </form>
 
       <form onSubmit={handleCreate} className="card flex flex-col gap-3 mb-4">
         <label className="text-xs font-bold uppercase tracking-wide text-sub">Create a league</label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="e.g. Work Mates"
-            maxLength={30}
-            className="flex-1 px-4 py-3 rounded-smcard border border-lineHi bg-bg2 text-ink text-base outline-none focus:border-brandGreen"
-          />
-          <button
-            type="submit"
-            disabled={creating}
-            className="btn-primary px-5 rounded-2xl font-extrabold text-[14px]"
-          >
-            {creating ? "Creating…" : "Create"}
-          </button>
-        </div>
+        <input
+          type="text"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="e.g. Work Mates"
+          maxLength={30}
+          className="w-full px-4 py-3 rounded-smcard border border-lineHi bg-bg2 text-ink text-base outline-none focus:border-brandGreen"
+        />
+        <button
+          type="submit"
+          disabled={creating}
+          className="btn-primary w-full py-3 rounded-2xl font-extrabold text-[14px]"
+        >
+          {creating ? "Creating…" : "Create"}
+        </button>
       </form>
-
       {error && <p className="text-red text-xs mb-4">{error}</p>}
 
       <div className="text-[11px] font-extrabold uppercase tracking-wide text-subDim mb-2.5 ml-0.5">
