@@ -130,7 +130,3 @@ export default async function TablePage({
     </div>
   );
 }
-
-    </div>
-  );
-}
