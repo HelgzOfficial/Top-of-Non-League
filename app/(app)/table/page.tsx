@@ -87,9 +87,7 @@ export default async function TablePage({
                     s.profile_id === user!.id ? "text-brandGreen" : ""
                   }`}
                 >
-                  <Link
-                    href={s.profile_id === user!.id ? "/profile" : `/profile/${s.profile_id}`}
-                    <Link
+                 <Link
                     href={s.profile_id === user!.id ? "/profile" : `/profile/${s.profile_id}`}
                     className="flex items-center gap-1.5"
                   >
