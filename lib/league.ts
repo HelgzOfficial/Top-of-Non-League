@@ -348,3 +348,14 @@ export async function leaveLeague(supabase: SupabaseClient, leagueId: string, pr
     .eq("profile_id", profileId);
   if (error) throw new Error(error.message);
 }
+// A private league: a friend group sharing a filtered view of the same
+// standings everyone else has. Not a separate competition — see
+// supabase/migrations/0007_private_leagues.sql.
+export type MyLeague = {
+  id: string;
+  name: string;
+  join_code: string;
+  owner_profile_id: string;
+  created_at: string;
+  member_count: number;
+};
