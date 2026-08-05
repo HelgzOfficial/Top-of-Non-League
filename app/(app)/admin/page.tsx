@@ -14,8 +14,14 @@ export default async function AdminPage() {
   // supabase/migrations/0010_admin_functions.sql), which reject anyone
   // whose JWT email isn't this exact address, no matter how they're
   // called.
-  if (!user || user.email !== ADMIN_EMAIL) {
-    redirect("/home");
+  if (!user || user.email?.toLowerCase() !== ADMIN_EMAIL) {
+    return (
+      <div className="px-4 pt-6">
+        <p className="text-sub text-sm">
+          Not authorized. Signed in as: {user?.email ?? "(no email — not signed in?)"}
+        </p>
+      </div>
+    );
   }
 
   const [{ data: profiles }, { data: leagues }] = await Promise.all([
