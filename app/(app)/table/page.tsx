@@ -130,43 +130,7 @@ export default async function TablePage({
     </div>
   );
 }
-<div className="flex flex-col gap-2.5">
-        {myLeagues.map((l) => (
-          <div key={l.id} className="card !p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-extrabold text-[15px]">{l.name}</span>
-              <span className="text-[11px] text-subDim">
-                {l.member_count} member{l.member_count === 1 ? "" : "s"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-[13px] mb-3">
-              <span className="text-sub">
-                Code: <span className="font-bold tracking-[2px] text-ink">{l.join_code}</span>
-              </span>
-            </div>
-            <div className="flex gap-2">
-              
-                href={`/table?league=${l.id}`}
-                className="flex-1 text-center py-2.5 rounded-xl border border-lineHi text-[13px] font-bold"
-              >
-                View leaderboard
-              </a>
-              <button
-                onClick={() => handleShare(l)}
-                className="flex-1 py-2.5 rounded-xl border border-brandGreen/30 bg-brandGreen/10 text-brandGreen text-[13px] font-bold"
-              >
-                {copiedId === l.id ? "Link copied!" : "Share link"}
-              </button>
-            </div>
-            <button
-              onClick={() => handleLeave(l.id)}
-              className="w-full mt-2 py-1.5 text-[12px] text-subDim underline"
-            >
-              Leave league
-            </button>
-          </div>
-        ))}
-      </div>
+
     </div>
   );
 }
