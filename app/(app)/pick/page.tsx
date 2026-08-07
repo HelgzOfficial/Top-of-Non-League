@@ -35,7 +35,14 @@ export default async function PickPage() {
     getMyPickForGameweek(supabase, user!.id, gameweek.id),
   ]);
 
-  const deadlinePassed = Boolean(gameweek.deadline_at && new Date(gameweek.deadline_at) < new Date());
+  // Each fixture locks 90 minutes before its own kickoff (see PickBoard and
+  // app/(app)/pick/actions.ts) — the game week only counts as fully
+  // "closed" once every one of its fixtures has locked. A fixture with no
+  // kickoff time yet never locks on its own.
+  const now = Date.now();
+  const deadlinePassed =
+    fixtures.length > 0 &&
+    fixtures.every((f) => f.kickoff_at && new Date(f.kickoff_at).getTime() - 90 * 60 * 1000 <= now);
 
   // Only fetch the reveal once it's actually allowed to show — the
   // gameweek_picks view itself also enforces this, so this is just to
