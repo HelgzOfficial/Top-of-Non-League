@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentGameweek, getFixturesForGameweek, getMyPickForGameweek, getStandings } from "@/lib/league";
 import { ordinal } from "@/lib/types";
 import AppLogo from "@/components/AppLogo";
+import LockCountdown from "@/components/LockCountdown";
 
 export default async function HomePage() {
   const supabase = createClient();
@@ -27,6 +28,17 @@ export default async function HomePage() {
     const myPick = await getMyPickForGameweek(supabase, user!.id, gameweek.id);
     const allPlayed = fixtures.length > 0 && fixtures.every((f) => f.result);
 
+    // The soonest a still-open fixture in this gameweek will lock (90 min
+    // before its own kickoff) — used to show "time left to pick at all" on
+    // the Home card. null once every fixture has already locked.
+    const nextLockAt = fixtures.reduce((earliest: number | null, f) => {
+      if (!f.kickoff_at) return earliest;
+      const lockAt = new Date(f.kickoff_at).getTime() - 90 * 60 * 1000;
+      if (lockAt <= Date.now()) return earliest;
+      if (earliest === null || lockAt < earliest) return lockAt;
+      return earliest;
+    }, null);
+
     if (!myPick) {
       gwCard = (
         <div className="card mt-4">
@@ -39,6 +51,7 @@ export default async function HomePage() {
           <p className="text-sub text-[13px] mt-1.5">
             Choose one Isthmian Premier team from this week&apos;s fixtures.
           </p>
+          <LockCountdown lockAt={nextLockAt} />
           <Link
             href="/pick"
             className="btn-primary w-full py-3.5 rounded-2xl font-extrabold text-[15px] mt-3.5 flex items-center justify-center"
@@ -90,7 +103,6 @@ export default async function HomePage() {
       );
     }
   }
-
   const gd = (myRow?.goal_difference ?? 0);
   return (
     <div className="px-4 pt-6">
