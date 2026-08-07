@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { FixtureWithTeamsAndResult, Gameweek } from "@/lib/types";
 import type { GameweekPick } from "@/lib/league";
@@ -27,6 +27,13 @@ export default function PickBoard({
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [now, setNow] = useState<number | null>(null);
+
+  useEffect(() => {
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const allPlayed = fixtures.length > 0 && fixtures.every((f) => f.result);
 
@@ -124,37 +131,52 @@ export default function PickBoard({
       </div>
     );
   }
-
   // --- Choosing ---
   return (
     <div className="px-4 pt-6 pb-6">
       <Header gwNumber={gameweek.number} subtitle="Tap a team from any fixture below" />
 
-      {fixtures.map((f) => (
-        <div key={f.id} className="card mb-2.5 !p-3.5">
-          <TeamRow
-            id={f.home_team_id}
-            name={f.home_team.name}
-            logoPath={f.home_team.logo_path}
-            allowance={allowance(f.home_team_id)}
-            selected={selected === f.home_team_id}
-            disabled={allowance(f.home_team_id) <= 0}
-            onSelect={() => setSelected(f.home_team_id)}
-          />
-          <div className="text-center text-[10px] text-subDim font-extrabold tracking-widest my-0.5">
-            VS · GW{gameweek.number}
+      {fixtures.map((f) => {
+        const lockAt = fixtureLockAt(f.kickoff_at);
+        const msLeft = lockAt !== null && now !== null ? lockAt - now : null;
+        const fixtureLocked = msLeft !== null && msLeft <= 0;
+
+        return (
+          <div key={f.id} className="card mb-2.5 !p-3.5">
+            <TeamRow
+              id={f.home_team_id}
+              name={f.home_team.name}
+              logoPath={f.home_team.logo_path}
+              allowance={allowance(f.home_team_id)}
+              selected={selected === f.home_team_id}
+              disabled={allowance(f.home_team_id) <= 0}
+              locked={fixtureLocked}
+              onSelect={() => setSelected(f.home_team_id)}
+            />
+            <div className="text-center text-[10px] font-extrabold tracking-widest my-0.5">
+              {fixtureLocked ? (
+                <span className="text-red">LOCKED · GW{gameweek.number}</span>
+              ) : msLeft !== null ? (
+                <span className="text-subDim">
+                  Locks in {countdownLabel(msLeft)} · GW{gameweek.number}
+                </span>
+              ) : (
+                <span className="text-subDim">VS · GW{gameweek.number}</span>
+              )}
+            </div>
+            <TeamRow
+              id={f.away_team_id}
+              name={f.away_team.name}
+              logoPath={f.away_team.logo_path}
+              allowance={allowance(f.away_team_id)}
+              selected={selected === f.away_team_id}
+              disabled={allowance(f.away_team_id) <= 0}
+              locked={fixtureLocked}
+              onSelect={() => setSelected(f.away_team_id)}
+            />
           </div>
-          <TeamRow
-            id={f.away_team_id}
-            name={f.away_team.name}
-            logoPath={f.away_team.logo_path}
-            allowance={allowance(f.away_team_id)}
-            selected={selected === f.away_team_id}
-            disabled={allowance(f.away_team_id) <= 0}
-            onSelect={() => setSelected(f.away_team_id)}
-          />
-        </div>
-      ))}
+        );
+      })}
 
       {error && <p className="text-red text-xs text-center mb-2">{error}</p>}
 
@@ -223,7 +245,6 @@ function PicksReveal({
     </div>
   );
 }
-
 function Header({ gwNumber, subtitle }: { gwNumber: number; subtitle: string }) {
   return (
     <div className="flex items-center justify-between mb-4">
@@ -244,6 +265,7 @@ function TeamRow({
   allowance,
   selected,
   disabled,
+  locked,
   onSelect,
 }: {
   id: string;
@@ -252,15 +274,17 @@ function TeamRow({
   allowance: number;
   selected: boolean;
   disabled: boolean;
+  locked: boolean;
   onSelect: () => void;
 }) {
+  const isDisabled = disabled || locked;
   return (
     <button
       onClick={onSelect}
-      disabled={disabled}
+      disabled={isDisabled}
       className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl border font-bold text-sm transition-all
         ${selected ? "border-brandGreen bg-brandGreen/10" : "border-lineHi bg-bg2"}
-        ${disabled ? "opacity-35 cursor-not-allowed" : ""}`}
+        ${isDisabled ? "opacity-35 cursor-not-allowed" : ""}`}
     >
       <span className="flex items-center gap-2.5">
         <TeamCrest name={name} logoPath={logoPath} active={selected} />
@@ -268,6 +292,8 @@ function TeamRow({
       </span>
       {disabled ? (
         <span className="text-[10.5px] font-extrabold px-2 py-1 rounded-full text-red bg-red/15">Used</span>
+      ) : locked ? (
+        <span className="text-[10.5px] font-extrabold px-2 py-1 rounded-full text-red bg-red/15">Locked</span>
       ) : (
         <span className="flex gap-1">
           {[0, 1].map((n) => (
@@ -280,4 +306,24 @@ function TeamRow({
       )}
     </button>
   );
+}
+
+const LOCK_MINUTES_BEFORE_KICKOFF = 90;
+
+/** The instant a fixture locks: 90 minutes before its own kickoff. Null if
+ * the fixture has no kickoff time yet (never locks on its own). */
+function fixtureLockAt(kickoffAt: string | null): number | null {
+  if (!kickoffAt) return null;
+  return new Date(kickoffAt).getTime() - LOCK_MINUTES_BEFORE_KICKOFF * 60 * 1000;
+}
+
+function countdownLabel(msLeft: number): string {
+  const totalSeconds = Math.floor(msLeft / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
 }
