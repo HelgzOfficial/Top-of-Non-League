@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 
 /**
- * Live "time remaining" countdown to a single deadline timestamp (ms
- * epoch). Used on the Home page to show how long until the NEXT fixture in
- * the open gameweek locks — see app/(app)/pick/PickBoard.tsx for the
- * equivalent per-fixture countdown shown on the Pick tab itself, where
- * every fixture locks independently 90 minutes before its own kickoff.
+ * A warning banner with a live countdown to the next fixture lock — shown
+ * on the Home page whenever a manager hasn't picked yet for the open
+ * gameweek, so the amount of time left to act is impossible to miss. See
+ * app/(app)/pick/PickBoard.tsx for the equivalent per-fixture countdown on
+ * the Pick tab itself, where every fixture locks independently 90 minutes
+ * before its own kickoff.
  */
 export default function LockCountdown({ lockAt }: { lockAt: number | null }) {
   const [now, setNow] = useState<number | null>(null);
@@ -41,8 +42,17 @@ export default function LockCountdown({ lockAt }: { lockAt: number | null }) {
   }
 
   return (
-    <p className={`text-[12px] font-bold mt-1.5 ${urgent ? "text-red" : "text-brandGreen"}`}>
-      Next pick locks in {label}
-    </p>
+    <div
+      className={`flex items-center justify-between px-3 py-2.5 rounded-xl border mt-2.5 ${
+        urgent ? "border-red/30 bg-red/10" : "border-gold/30 bg-gold/10"
+      }`}
+    >
+      <span className={`text-[11.5px] font-bold ${urgent ? "text-red" : "text-gold"}`}>
+        Time left to pick
+      </span>
+      <span className={`text-[14px] font-black tabular-nums ${urgent ? "text-red" : "text-gold"}`}>
+        {label}
+      </span>
+    </div>
   );
 }
