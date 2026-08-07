@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 
 export type SubmitPickResult = { ok: true } | { ok: false; message: string };
 
+const LOCK_MINUTES_BEFORE_KICKOFF = 90;
+
 export async function submitPick(gameweekId: string, teamId: string): Promise<SubmitPickResult> {
   const supabase = createClient();
 
@@ -16,14 +18,24 @@ export async function submitPick(gameweekId: string, teamId: string): Promise<Su
     return { ok: false, message: "You need to sign in again." };
   }
 
-  const { data: gameweek } = await supabase
-    .from("gameweeks")
-    .select("deadline_at")
-    .eq("id", gameweekId)
-    .maybeSingle();
+  // Each fixture locks 90 minutes before ITS OWN kickoff — a game week can
+  // have fixtures at different times, so this looks up the specific
+  // fixture the chosen team is playing in this week, not a single
+  // game-week-wide cutoff.
+  const { data: fixtures } = await supabase
+    .from("fixtures")
+    .select("home_team_id, away_team_id, kickoff_at")
+    .eq("gameweek_id", gameweekId);
 
-  if (gameweek?.deadline_at && new Date(gameweek.deadline_at) < new Date()) {
-    return { ok: false, message: "Picks are locked for this game week — kickoff has passed." };
+  const fixture = (fixtures ?? []).find(
+    (f) => f.home_team_id === teamId || f.away_team_id === teamId
+  );
+
+  if (fixture?.kickoff_at) {
+    const lockAt = new Date(fixture.kickoff_at).getTime() - LOCK_MINUTES_BEFORE_KICKOFF * 60 * 1000;
+    if (Date.now() >= lockAt) {
+      return { ok: false, message: "That fixture kicks off too soon — picks for it are locked." };
+    }
   }
 
   const { error } = await supabase
@@ -34,8 +46,6 @@ export async function submitPick(gameweekId: string, teamId: string): Promise<Su
     );
 
   if (error) {
-    // The "picks_team_limit" trigger raises a plain Postgres exception when
-    // a team has already been picked twice — surface that message as-is.
     return { ok: false, message: error.message.includes("picked twice")
       ? "That team has already been picked twice this season."
       : error.message };
