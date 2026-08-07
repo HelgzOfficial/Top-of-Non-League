@@ -2,8 +2,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentGameweek, getFixturesForGameweek, getMyPickForGameweek, getStandings } from "@/lib/league";
 import { ordinal } from "@/lib/types";
+import type { FixtureWithTeamsAndResult } from "@/lib/types";
 import AppLogo from "@/components/AppLogo";
 import LockCountdown from "@/components/LockCountdown";
+import KickoffCountdown from "@/components/KickoffCountdown";
+import TeamCrest from "@/components/TeamCrest";
 
 export default async function HomePage() {
   const supabase = createClient();
@@ -23,8 +26,9 @@ export default async function HomePage() {
   const myPos = standings.findIndex((s) => s.profile_id === user!.id);
 
   let gwCard = null;
+  let fixtures: FixtureWithTeamsAndResult[] = [];
   if (gameweek) {
-    const fixtures = await getFixturesForGameweek(supabase, gameweek.id);
+    fixtures = await getFixturesForGameweek(supabase, gameweek.id);
     const myPick = await getMyPickForGameweek(supabase, user!.id, gameweek.id);
     const allPlayed = fixtures.length > 0 && fixtures.every((f) => f.result);
 
@@ -103,67 +107,3 @@ export default async function HomePage() {
       );
     }
   }
-  const gd = (myRow?.goal_difference ?? 0);
-  return (
-    <div className="px-4 pt-6">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2.5">
-          <AppLogo size={32} className="rounded-[9px]" />
-          <span className="font-extrabold text-base">Top of Non League</span>
-        </div>
-        {gameweek && (
-          <span className="text-[11.5px] font-extrabold text-brandGreen bg-brandGreen/10 border border-brandGreen/25 px-3 py-1.5 rounded-full">
-            GW {gameweek.number}
-          </span>
-        )}
-      </div>
-
-      <div className="card !rounded-[22px] !p-5">
-        <p className="text-[11px] uppercase tracking-wide font-extrabold text-subDim">{profile?.team_name}</p>
-        <div className="text-4xl font-black leading-none mt-1">
-          {myPos >= 0 ? ordinal(myPos + 1) : "-"}{" "}
-          <span className="text-sm font-bold text-sub">of {standings.length}</span>
-        </div>
-        <div className="grid grid-cols-3 gap-2.5 mt-4">
-          <StatBox v={myRow?.points ?? 0} k="Points" />
-          <StatBox v={`${gd > 0 ? "+" : ""}${gd}`} k="Goal diff" />
-          <StatBox v={myRow?.played ?? 0} k="Played" />
-        </div>
-      </div>
-
-      {gwCard}
-
-      <div className="text-[11px] font-extrabold uppercase tracking-wide text-subDim mt-6 mb-2.5 ml-0.5">
-        Mini league — top 5
-      </div>
-      <div className="card">
-        {standings.slice(0, 5).map((s, i) => (
-          <div
-            key={s.profile_id}
-            className={`flex items-center justify-between py-2.5 text-[13.5px] ${i > 0 ? "border-t border-line" : ""}`}
-          >
-            <span className={`font-semibold ${s.profile_id === user!.id ? "text-brandGreen" : ""}`}>
-              {i + 1}. {s.team_name}
-            </span>
-            <span className="font-extrabold bg-bg2 px-2.5 py-1 rounded-lg text-[12.5px]">{s.points} pts</span>
-          </div>
-        ))}
-        {standings.length === 0 && <p className="text-sub text-sm py-2">No one&apos;s on the board yet.</p>}
-      </div>
-      <div className="text-center mt-2.5">
-        <Link href="/table" className="text-sub text-[13px] underline">
-          View full table →
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-function StatBox({ v, k }: { v: string | number; k: string }) {
-  return (
-    <div className="bg-bg2 rounded-xl px-2 py-2.5 text-center">
-      <div className="text-[17px] font-extrabold">{v}</div>
-      <div className="text-[10px] text-subDim uppercase tracking-wide mt-0.5">{k}</div>
-    </div>
-  );
-}
