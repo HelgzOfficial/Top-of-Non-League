@@ -175,3 +175,42 @@ const gd = (myRow?.goal_difference ?? 0);
     </div>
   );
 }
+function StatBox({ v, k }: { v: string | number; k: string }) {
+  return (
+    <div className="bg-bg2 rounded-xl px-2 py-2.5 text-center">
+      <div className="text-[17px] font-extrabold">{v}</div>
+      <div className="text-[10px] text-subDim uppercase tracking-wide mt-0.5">{k}</div>
+    </div>
+  );
+}
+
+/**
+ * One row per fixture in the open gameweek, shown permanently on Home
+ * regardless of pick status — a live countdown to kickoff once there's no
+ * result yet, or the final score once there is.
+ */
+function FixtureRow({ fixture, isFirst }: { fixture: FixtureWithTeamsAndResult; isFirst: boolean }) {
+  return (
+    <div
+      className={`flex items-center justify-between gap-2 px-3.5 py-3 ${isFirst ? "" : "border-t border-line"}`}
+    >
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <TeamCrest name={fixture.home_team.name} logoPath={fixture.home_team.logo_path} size={20} />
+        <span className="font-bold text-[12px] truncate">{fixture.home_team.name}</span>
+      </div>
+      <div className="shrink-0 text-center px-2">
+        {fixture.result ? (
+          <span className="font-black text-[13px]">
+            {fixture.result.home_goals}-{fixture.result.away_goals}
+          </span>
+        ) : (
+          <KickoffCountdown kickoffAt={fixture.kickoff_at} />
+        )}
+      </div>
+      <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+        <span className="font-bold text-[12px] truncate text-right">{fixture.away_team.name}</span>
+        <TeamCrest name={fixture.away_team.name} logoPath={fixture.away_team.logo_path} size={20} />
+      </div>
+    </div>
+  );
+}
