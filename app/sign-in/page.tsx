@@ -15,7 +15,12 @@ export default function SignInPage() {
   async function sendCode(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!email.includes("@")) {
+    // Trim + lowercase so a stray leading/trailing space (common with
+    // mobile autofill) or inconsistent capitalization (iOS/Android
+    // keyboards handle this differently) never causes the code request and
+    // the verify step to disagree on the address.
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail.includes("@")) {
       setError("Enter a valid email address");
       return;
     }
@@ -23,17 +28,25 @@ export default function SignInPage() {
     // Sends a 6-digit code by email, PROVIDED the "Magic Link" email
     // template in Supabase → Authentication → Email Templates has been
     // edited to include {{ .Token }} — see SETUP.md. Without that edit,
-    // Supabase sends a clickable link instead of a code.
+    // Supabase sends a clickable link instead of a code, and — separately —
+    // if that link is ever tapped, emailRedirectTo below is what it lands
+    // on. It must also be listed under Authentication → URL Configuration →
+    // Redirect URLs in Supabase, or Supabase silently falls back to the
+    // project's default Site URL instead (this is what was sending new
+    // users to a dead "localhost" address).
     const { error: otpError } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: true },
+      email: normalizedEmail,
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+      },
     });
     setLoading(false);
     if (otpError) {
       setError(otpError.message);
       return;
     }
-    router.push(`/verify?email=${encodeURIComponent(email)}`);
+    router.push(`/verify?email=${encodeURIComponent(normalizedEmail)}`);
   }
 
   return (
@@ -53,6 +66,12 @@ export default function SignInPage() {
           </label>
           <input
             type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            autoFocus
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
