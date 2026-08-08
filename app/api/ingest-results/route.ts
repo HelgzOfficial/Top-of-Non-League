@@ -10,33 +10,23 @@ const SOURCE_URL =
   "https://www.footballwebpages.co.uk/isthmian-football-league-premier-division/fixtures-results";
 
 /**
- * ⚠️ IMPORTANT — read before relying on this in production.
- *
- * This route was written without the ability to fetch the live page's raw
- * HTML from the build sandbox (network access to arbitrary sites is
- * restricted there), so the column layout below is based on a structural
- * description of the page rather than a tested selector. Before you turn
- * on the Vercel Cron for this route:
- *   1. View the page source of SOURCE_URL yourself (or run this route once
- *      and check the `debug.unmatchedRows` / `debug.parsedSample` fields in
- *      its JSON response).
- *   2. Adjust COLUMN_INDEX below if the real column order differs.
- *   3. Consider emailing Football Web Pages about a licensed data feed —
- *      more reliable than scraping and won't break on a site redesign.
- *
- * Column order, one <td> per column within each fixture <tr>:
- *   [0] date  [1] status (e.g. "FT")  [2] home team  [3] score ("0 | 2")
- *   [4] away team  [5] attendance
- * Team name cells have the half-time score glued on, e.g. "Billericay
- * Town(0)" or "(0)Cray Wanderers" — stripped out below before matching.
- * Section header rows (e.g. "Saturday 5th April 2025") are skipped — they
- * don't have enough cells to reach the score column.
+ * Column order, one <td> per column within each fixture <tr> — confirmed
+ * against the real page (previously this was guessed blind and was wrong,
+ * which is why no results were ever being picked up):
+ *   [0] date  [1] status (e.g. "FT")  [2] home team  [3] home goals
+ *   [4] away goals  [5] away team  [6] attendance  [7] scorers (optional)
+ * The home/away goals are two SEPARATE numeric cells, not one combined
+ * "2 - 1"-style cell. Team name cells have the half-time score glued on,
+ * e.g. "Billericay Town(0)" or "(0)Cray Wanderers" — stripped out below.
+ * Section header rows (e.g. "Saturday 5th April 2025") and not-yet-played
+ * rows (kickoff time like "7.45pm" instead of a status/score) are skipped.
  */
-const COLUMN_INDEX = { homeTeam: 2, score: 3, awayTeam: 4 };
+const COLUMN_INDEX = { homeTeam: 2, homeGoals: 3, awayGoals: 4, awayTeam: 5 };
 
-// Matches "0 | 2" or "2-1" but not a kickoff time like "15:00" (no colon
-// in the allowed separator set) so not-yet-played fixture rows are skipped.
-const SCORE_PATTERN = /^(\d+)\s*[-–|]\s*(\d+)$/;
+// A pure whole number only — deliberately NOT using parseInt()/a loose
+// numeric regex on its own, because a kickoff time like "7:45" would
+// otherwise parseInt() to 7 and get misread as a goal count.
+const WHOLE_NUMBER = /^\d+$/;
 
 function normalizeTeamName(raw: string): string {
   return raw
@@ -50,10 +40,9 @@ function isAuthorized(request: NextRequest): boolean {
   const auth = request.headers.get("authorization");
   if (auth === `Bearer ${process.env.CRON_SECRET}`) return true;
   // Query-param fallback so this can be triggered manually from a plain
-  // browser address bar while testing — a normal browser navigation can't
-  // set a custom Authorization header, so the header-only check above made
-  // the "convenience" GET handler below impossible to actually use from a
-  // browser. Vercel Cron always uses the header form; this is for people.
+  // browser address bar, or by an external scheduler (e.g. cron-job.org)
+  // hitting a plain URL — neither can set a custom Authorization header.
+  // Vercel Cron always uses the header form; this is for everything else.
   const secretParam = request.nextUrl.searchParams.get("secret");
   return secretParam !== null && secretParam === process.env.CRON_SECRET;
 }
@@ -73,7 +62,6 @@ export async function POST(request: NextRequest) {
   if (teamsError || !teams) {
     return NextResponse.json({ error: "could not load teams from database" }, { status: 500 });
   }
-
   const teamsByNormalizedName = new Map(teams.map((t) => [normalizeTeamName(t.name), t.id]));
 
   function resolveTeamId(rawName: string): string | null {
@@ -117,11 +105,17 @@ export async function POST(request: NextRequest) {
       .map((__, td) => $(td).text().trim())
       .get();
 
-    if (cells.length < 5) return; // section header / non-fixture row
+    if (cells.length < 6) return; // section header / non-fixture / unplayed row
 
-    const scoreCell = cells[COLUMN_INDEX.score]?.trim();
-    const scoreMatch = scoreCell?.match(SCORE_PATTERN);
-    if (!scoreMatch) return;
+    const status = cells[1]?.trim().toUpperCase();
+    const homeGoalsRaw = cells[COLUMN_INDEX.homeGoals]?.trim();
+    const awayGoalsRaw = cells[COLUMN_INDEX.awayGoals]?.trim();
+
+    // Only ingest confirmed final scores. Postponed/rearranged rows and
+    // not-yet-played rows (which show a kickoff time here instead of a
+    // whole-number goal count) are skipped rather than guessed at.
+    if (status !== "FT") return;
+    if (!WHOLE_NUMBER.test(homeGoalsRaw ?? "") || !WHOLE_NUMBER.test(awayGoalsRaw ?? "")) return;
 
     // Strip the glued-on half-time score, e.g. "Billericay Town(0)" or
     // "(0)Cray Wanderers", before it reaches team-name matching.
@@ -131,17 +125,16 @@ export async function POST(request: NextRequest) {
 
     const homeId = resolveTeamId(homeRaw);
     const awayId = resolveTeamId(awayRaw);
-    const hg = parseInt(scoreMatch[1], 10);
-    const ag = parseInt(scoreMatch[2], 10);
+    const hg = parseInt(homeGoalsRaw, 10);
+    const ag = parseInt(awayGoalsRaw, 10);
 
-    if (!homeId || !awayId || Number.isNaN(hg) || Number.isNaN(ag)) {
-      unmatchedRows.push(`${homeRaw} ${scoreCell} ${awayRaw}`);
+    if (!homeId || !awayId) {
+      unmatchedRows.push(`${homeRaw} ${hg}-${ag} ${awayRaw}`);
       return;
     }
 
     matched.push({ home: homeId, away: awayId, hg, ag });
   });
-
   let written = 0;
   const writeErrors: string[] = [];
 
@@ -186,10 +179,11 @@ export async function POST(request: NextRequest) {
   });
 }
 
-// Convenience for manually triggering from a browser while testing: visit
+// Convenience for manually triggering from a browser while testing, or for
+// an external scheduler (e.g. cron-job.org) to hit on a tighter schedule
+// than Vercel's own Hobby-plan cron allows (see the Vercel Cron entry in
+// vercel.json, which stays as a once-daily safety net): visit
 // https://YOUR-DOMAIN/api/ingest-results?secret=YOUR_CRON_SECRET
-// (no terminal/curl needed). Remove or protect further before going live
-// if you'd rather this only ever run via POST from Vercel Cron.
 export async function GET(request: NextRequest) {
   return POST(request);
 }
