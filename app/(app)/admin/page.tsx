@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import AddUserToLeague from "./AddUserToLeague";
+import PullResults from "./PullResults";
 
 const ADMIN_EMAIL = "helgzofficial@gmail.com";
 
@@ -63,6 +64,8 @@ export default async function AdminPage() {
     <div className="px-4 pt-6 pb-10">
       <h1 className="text-xl font-extrabold mb-1">Admin</h1>
       <p className="text-[13px] text-sub mb-6">Everyone who&apos;s signed up, and every private league.</p>
+
+      <PullResults />
 
       <div className="text-[11px] font-extrabold uppercase tracking-wide text-subDim mb-2.5 ml-0.5">
         Bug reports ({reports.length})
