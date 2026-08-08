@@ -4,6 +4,13 @@ import AddUserToLeague from "./AddUserToLeague";
 import PullResults from "./PullResults";
 import SetResult from "./SetResult";
 
+// ScraperAPI's "render" mode (a real headless browser, used by the "Pull
+// results" button's server action) can take a while, and this can also
+// fall through to a slower "premium"/"ultra_premium" mode — give this
+// page's actions real room rather than hitting the default function
+// timeout partway through a request that would otherwise have succeeded.
+export const maxDuration = 60;
+
 const ADMIN_EMAIL = "helgzofficial@gmail.com";
 
 type AdminProfile = {
