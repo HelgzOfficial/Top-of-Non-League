@@ -38,7 +38,35 @@ export async function middleware(request: NextRequest) {
   );
 
   // Touching getUser() is what actually triggers a token refresh when needed.
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // A private-league invite link looks like /leagues?join=CODE. Anyone who
+  // isn't fully signed in yet gets redirected away by app/(app)/layout.tsx
+  // (to /sign-in if signed out, to /setup if signed in but hasn't named
+  // their team yet) — but neither of those redirects carries the join code
+  // along, so a brand new user tapping an invite link would sign up
+  // successfully and land on /home with no idea what code to enter.
+  // Catching it here, before either redirect happens, threads the code
+  // through as a "next" param all the way to sign-in → verify → setup, so
+  // it survives and they land back on /leagues with it already filled in.
+  if (request.nextUrl.pathname === "/leagues" && request.nextUrl.searchParams.has("join")) {
+    const nextTarget = request.nextUrl.pathname + request.nextUrl.search;
+
+    if (!user) {
+      const signInUrl = new URL("/sign-in", request.url);
+      signInUrl.searchParams.set("next", nextTarget);
+      return NextResponse.redirect(signInUrl);
+    }
+
+    const { data: profile } = await supabase.from("profiles").select("id").eq("id", user.id).maybeSingle();
+    if (!profile) {
+      const setupUrl = new URL("/setup", request.url);
+      setupUrl.searchParams.set("next", nextTarget);
+      return NextResponse.redirect(setupUrl);
+    }
+  }
 
   return response;
 }
