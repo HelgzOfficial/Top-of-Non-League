@@ -4,12 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ingestResults, type IngestResultSummary } from "@/lib/ingestResults";
 
-// ScraperAPI's "render" mode (a real headless browser) can take a while,
-// and this can also fall through to a slower "premium"/"ultra_premium"
-// mode — give it real room rather than hitting the default function
-// timeout partway through a request that would otherwise have succeeded.
-export const maxDuration = 60;
-
 const ADMIN_EMAIL = "helgzofficial@gmail.com";
 
 export type PullResultsResponse =
@@ -46,10 +40,10 @@ export async function pullResults(): Promise<PullResultsResponse> {
 export type SetResultResponse = { ok: true } | { ok: false; error: string };
 
 /**
-* Lets the admin type in a final score by hand for a fixture — the
+ * Lets the admin type in a final score by hand for a fixture — the
  * always-works fallback for whenever the automatic scraper is blocked or
  * hasn't run yet. Same underlying write as ingestResults() (an upsert into
- * `results` keyed on fixture_id, via the service-role client since regular
+* `results` keyed on fixture_id, via the service-role client since regular
  * users have no write access to that table), just admin-supplied instead
  * of scraped.
  */
