@@ -31,6 +31,53 @@ function normalizeTeamName(raw: string): string {
     .trim();
 }
 
+// The source site 403s plain server-to-server fetches (Cloudflare-style bot
+// protection — confirmed by testing, not something extra headers fix). If
+// SCRAPER_API_KEY is set, requests are routed through scraperapi.com's
+// proxy instead, which runs a real headless browser / rotates proxies to
+// get past that. Free tier: 1,000 credits, no card required — sign up at
+// scraperapi.com. Without a key, falls back to the old direct fetch (fine
+// for sites that don't block it, but this one will keep 403ing).
+// SCRAPER_API_MODE lets you dial up how hard it tries without a code
+// change if "render" alone still gets blocked: "render" (headless browser,
+// cheapest) → "premium" (better proxy pool) → "ultra_premium" (most
+// expensive, reserved for the toughest anti-bot setups).
+const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
+const SCRAPER_API_MODE = process.env.SCRAPER_API_MODE || "render";
+async function fetchSourceHtml(): Promise<string> {
+  if (SCRAPER_API_KEY) {
+    const modeParam =
+      SCRAPER_API_MODE === "ultra_premium"
+        ? "ultra_premium=true"
+        : SCRAPER_API_MODE === "premium"
+        ? "premium=true"
+        : "render=true";
+    const proxyUrl = `https://api.scraperapi.com/?api_key=${encodeURIComponent(
+      SCRAPER_API_KEY
+    )}&url=${encodeURIComponent(SOURCE_URL)}&${modeParam}`;
+    const res = await fetch(proxyUrl, { next: { revalidate: 0 } });
+    if (!res.ok) throw new Error(`ScraperAPI fetch failed: ${res.status}`);
+    return res.text();
+  }
+
+  const res = await fetch(SOURCE_URL, {
+    headers: {
+      // A generic "...Bot/1.0" UA is a common trigger for basic bot
+      // filtering on sites like this one, hence the ordinary-browser UA
+      // and supporting headers below rather than self-identifying as a bot.
+      // Doesn't get past Cloudflare-style protection on its own — that's
+      // what SCRAPER_API_KEY above is for.
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-GB,en;q=0.9",
+    },
+    next: { revalidate: 0 },
+  });
+  if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
+  return res.text();
+}
+
 export type IngestResultSummary = {
   source: string;
   fixturesParsed: number;
@@ -59,6 +106,7 @@ export async function ingestResults(supabase: SupabaseClient): Promise<IngestRes
     .from("teams")
     .select("id, name")
     .eq("league_slug", LEAGUE_SLUG);
+
   if (teamsError || !teams) {
     throw new Error("could not load teams from database");
   }
@@ -77,20 +125,7 @@ export async function ingestResults(supabase: SupabaseClient): Promise<IngestRes
 
   let html: string;
   try {
-    const res = await fetch(SOURCE_URL, {
-      headers: {
-        // A generic "...Bot/1.0" UA is a common trigger for basic bot
-        // filtering on sites like this one, hence the ordinary-browser UA
-        // and supporting headers below rather than self-identifying as a bot.
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-GB,en;q=0.9",
-      },
-      next: { revalidate: 0 },
-    });
-    if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
-    html = await res.text();
+    html = await fetchSourceHtml();
   } catch (err: any) {
     throw new Error(`could not fetch source page: ${String(err)}`);
   }
@@ -128,6 +163,7 @@ export async function ingestResults(supabase: SupabaseClient): Promise<IngestRes
     const awayId = resolveTeamId(awayRaw);
     const hg = parseInt(homeGoalsRaw, 10);
     const ag = parseInt(awayGoalsRaw, 10);
+
     if (!homeId || !awayId) {
       unmatchedRows.push(`${homeRaw} ${hg}-${ag} ${awayRaw}`);
       return;
@@ -135,7 +171,6 @@ export async function ingestResults(supabase: SupabaseClient): Promise<IngestRes
 
     matched.push({ home: homeId, away: awayId, hg, ag });
   });
-
   let written = 0;
   const writeErrors: string[] = [];
 
