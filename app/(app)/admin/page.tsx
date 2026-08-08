@@ -10,6 +10,15 @@ type AdminProfile = {
   league_count: number;
 };
 
+type BugReport = {
+  id: string;
+  profile_id: string;
+  team_name: string;
+  message: string;
+  page_path: string | null;
+  created_at: string;
+};
+
 export default async function AdminPage() {
   const supabase = createClient();
   const {
@@ -33,12 +42,14 @@ export default async function AdminPage() {
     );
   }
 
-  const [{ data: profiles }, { data: leagues }] = await Promise.all([
+  const [{ data: profiles }, { data: leagues }, { data: bugReports }] = await Promise.all([
     supabase.rpc("admin_get_profiles"),
     supabase.rpc("admin_get_leagues"),
+    supabase.rpc("admin_get_bug_reports"),
   ]);
 
   const allProfiles: AdminProfile[] = profiles ?? [];
+  const reports: BugReport[] = bugReports ?? [];
 
   const leagueMembers: Record<string, { profile_id: string; team_name: string }[]> = {};
   for (const l of leagues ?? []) {
@@ -52,6 +63,29 @@ export default async function AdminPage() {
     <div className="px-4 pt-6 pb-10">
       <h1 className="text-xl font-extrabold mb-1">Admin</h1>
       <p className="text-[13px] text-sub mb-6">Everyone who&apos;s signed up, and every private league.</p>
+
+      <div className="text-[11px] font-extrabold uppercase tracking-wide text-subDim mb-2.5 ml-0.5">
+        Bug reports ({reports.length})
+      </div>
+      <div className="flex flex-col gap-2.5 mb-6">
+        {reports.map((r) => (
+          <div key={r.id} className="card !p-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-extrabold text-[14px]">{r.team_name}</span>
+              <span className="text-[11px] text-subDim">
+                {new Date(r.created_at).toLocaleString()}
+              </span>
+            </div>
+            {r.page_path && <p className="text-[11px] text-subDim mb-1.5">{r.page_path}</p>}
+            <p className="text-[13px] text-ink whitespace-pre-wrap">{r.message}</p>
+          </div>
+        ))}
+        {reports.length === 0 && (
+          <div className="card !p-4">
+            <p className="text-sub text-sm">No bug reports yet.</p>
+          </div>
+        )}
+      </div>
 
       <div className="text-[11px] font-extrabold uppercase tracking-wide text-subDim mb-2.5 ml-0.5">
         Overall league
