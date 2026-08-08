@@ -19,6 +19,7 @@ export default function VerifyForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
+  const next = searchParams.get("next") ?? "";
   const supabase = createClient();
 
   const [code, setCode] = useState("");
@@ -44,8 +45,10 @@ export default function VerifyForm() {
       setError("Incorrect or expired code — check and try again");
       return;
     }
-    // page.tsx at "/" decides whether to send them to /setup or /home
-    router.push("/");
+    // page.tsx at "/" decides whether to send them to /setup or /home,
+    // carrying "next" (e.g. a private-league invite's /leagues?join=CODE)
+    // through whichever of those it picks.
+    router.push(next ? `/?next=${encodeURIComponent(next)}` : "/");
     router.refresh();
   }
 
@@ -81,7 +84,7 @@ export default function VerifyForm() {
         </button>
         <button
           type="button"
-          onClick={() => router.push("/sign-in")}
+          onClick={() => router.push(next ? `/sign-in?next=${encodeURIComponent(next)}` : "/sign-in")}
           className="text-sub text-[13px] underline py-1"
         >
           Use a different email
