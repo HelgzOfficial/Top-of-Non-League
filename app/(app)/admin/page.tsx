@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAllFixturesWithGameweek } from "@/lib/league";
 import AddUserToLeague from "./AddUserToLeague";
 import PullResults from "./PullResults";
+import SetResult from "./SetResult";
 
 const ADMIN_EMAIL = "helgzofficial@gmail.com";
 
@@ -43,10 +45,11 @@ export default async function AdminPage() {
     );
   }
 
-  const [{ data: profiles }, { data: leagues }, { data: bugReports }] = await Promise.all([
+  const [{ data: profiles }, { data: leagues }, { data: bugReports }, fixtures] = await Promise.all([
     supabase.rpc("admin_get_profiles"),
     supabase.rpc("admin_get_leagues"),
     supabase.rpc("admin_get_bug_reports"),
+    getAllFixturesWithGameweek(supabase),
   ]);
 
   const allProfiles: AdminProfile[] = profiles ?? [];
@@ -66,6 +69,7 @@ export default async function AdminPage() {
       <p className="text-[13px] text-sub mb-6">Everyone who&apos;s signed up, and every private league.</p>
 
       <PullResults />
+      <SetResult fixtures={fixtures} />
 
       <div className="text-[11px] font-extrabold uppercase tracking-wide text-subDim mb-2.5 ml-0.5">
         Bug reports ({reports.length})
