@@ -8,6 +8,14 @@ import {
 } from "@/lib/league";
 import PickBoard from "./PickBoard";
 
+// This page's whole point is showing the live current gameweek and
+// deadline state — Next.js's fetch/data cache can otherwise hold onto a
+// stale render from before a gameweek's results came in (this is very
+// likely what caused the Pick page to keep showing gameweek 1 even after
+// it was fully resulted). Force it to always render fresh.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function PickPage() {
   const supabase = createClient();
   const {
