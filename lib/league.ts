@@ -15,17 +15,33 @@ import {
  * have a result recorded for every one of its fixtures. Once every fixture
  * in a gameweek has a final score, the next gameweek becomes current
  * automatically — there's no manual "advance the season" step to run.
+ *
+ * The one exception: a gameweek can also be force-closed by the admin (see
+ * gameweek_force_closes / app/(app)/admin/actions.ts's forceCloseGameweek())
+ * for the rare case where a fixture is postponed/abandoned and will never
+ * get a real result — without this, a single stuck fixture would block
+ * everyone from picking for the rest of the season. Force-closing never
+ * touches `results`, so an un-played fixture in a force-closed gameweek
+ * simply never contributes to anyone's points, same as if it had never
+ * been picked against a real result.
  */
 export async function getCurrentGameweek(supabase: SupabaseClient): Promise<Gameweek | null> {
-  const { data: gameweeks, error } = await supabase
-    .from("gameweeks")
-    .select("*")
-    .eq("league_slug", LEAGUE_SLUG)
-    .order("number", { ascending: true });
+  const [{ data: gameweeks, error }, { data: forceClosed }] = await Promise.all([
+    supabase
+      .from("gameweeks")
+      .select("*")
+      .eq("league_slug", LEAGUE_SLUG)
+      .order("number", { ascending: true }),
+    supabase.from("gameweek_force_closes").select("gameweek_id"),
+  ]);
 
   if (error || !gameweeks) return null;
 
+  const forceClosedIds = new Set((forceClosed ?? []).map((r: { gameweek_id: string }) => r.gameweek_id));
+
   for (const gw of gameweeks) {
+    if (forceClosedIds.has(gw.id)) continue;
+
     const { data: fixtures } = await supabase
       .from("fixtures")
       .select("id, results(fixture_id)")
@@ -38,8 +54,33 @@ export async function getCurrentGameweek(supabase: SupabaseClient): Promise<Game
     if (!allPlayed) return gw;
   }
 
-  // Every gameweek fully played — season's over; show the last one.
+  // Every gameweek fully played (or force-closed) — season's over; show the last one.
   return gameweeks[gameweeks.length - 1] ?? null;
+}
+
+/**
+ * Every gameweek the admin has manually force-closed, with its number, for
+ * display on the Admin dashboard (so a force-close can be reviewed/undone
+ * — see reopenGameweek() in app/(app)/admin/actions.ts).
+ */
+export async function getForceClosedGameweeks(
+  supabase: SupabaseClient
+): Promise<{ gameweek_id: string; number: number }[]> {
+  const { data: closes } = await supabase.from("gameweek_force_closes").select("gameweek_id");
+  if (!closes || closes.length === 0) return [];
+
+  const { data: gameweeks } = await supabase
+    .from("gameweeks")
+    .select("id, number")
+    .in(
+      "id",
+      closes.map((c) => c.gameweek_id)
+    );
+
+  const numberById = new Map((gameweeks ?? []).map((g) => [g.id, g.number]));
+  return closes
+    .map((c) => ({ gameweek_id: c.gameweek_id, number: numberById.get(c.gameweek_id) ?? 0 }))
+    .sort((a, b) => a.number - b.number);
 }
 
 export async function getFixturesForGameweek(
