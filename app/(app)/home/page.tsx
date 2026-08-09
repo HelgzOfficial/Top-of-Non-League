@@ -7,7 +7,11 @@ import AppLogo from "@/components/AppLogo";
 import LockCountdown from "@/components/LockCountdown";
 import KickoffCountdown from "@/components/KickoffCountdown";
 import TeamCrest from "@/components/TeamCrest";
-
+// Same reasoning as app/(app)/pick/page.tsx: this page shows the live
+// current gameweek and fixture/result state, so it can't risk serving a
+// stale cached render from before a gameweek's results came in.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export default async function HomePage() {
   const supabase = createClient();
   const {
