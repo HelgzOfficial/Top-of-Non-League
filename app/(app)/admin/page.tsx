@@ -1,8 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAllFixturesWithGameweek } from "@/lib/league";
+import {
+  getAllFixturesWithGameweek,
+  getCurrentGameweek,
+  getFixturesForGameweek,
+  getForceClosedGameweeks,
+} from "@/lib/league";
 import AddUserToLeague from "./AddUserToLeague";
 import PullResults from "./PullResults";
 import SetResult from "./SetResult";
+import AdvanceGameweek from "./AdvanceGameweek";
 
 // ScraperAPI's "render" mode (a real headless browser, used by the "Pull
 // results" button's server action) can take a while, and this can also
@@ -57,7 +63,7 @@ export default async function AdminPage() {
     supabase.rpc("admin_get_leagues"),
     supabase.rpc("admin_get_bug_reports"),
     getAllFixturesWithGameweek(supabase),
-  ]);
+    ]);
 
   const allProfiles: AdminProfile[] = profiles ?? [];
   const reports: BugReport[] = bugReports ?? [];
@@ -70,12 +76,26 @@ export default async function AdminPage() {
     leagueMembers[l.id] = members ?? [];
   }
 
+  const currentGameweek = await getCurrentGameweek(supabase);
+  const [currentGameweekFixtures, forceClosedGameweeks] = await Promise.all([
+    currentGameweek ? getFixturesForGameweek(supabase, currentGameweek.id) : Promise.resolve([]),
+    getForceClosedGameweeks(supabase),
+  ]);
+
   return (
     <div className="px-4 pt-6 pb-10">
       <h1 className="text-xl font-extrabold mb-1">Admin</h1>
       <p className="text-[13px] text-sub mb-6">Everyone who&apos;s signed up, and every private league.</p>
 
       <PullResults />
+      {currentGameweek && (
+        <AdvanceGameweek
+          gameweekId={currentGameweek.id}
+          gameweekNumber={currentGameweek.number}
+          fixtures={currentGameweekFixtures}
+          forceClosedGameweeks={forceClosedGameweeks}
+        />
+      )}
       <SetResult fixtures={fixtures} />
 
       <div className="text-[11px] font-extrabold uppercase tracking-wide text-subDim mb-2.5 ml-0.5">
@@ -107,8 +127,7 @@ export default async function AdminPage() {
       <div className="card !p-4 mb-6">
         <div className="flex items-center justify-between mb-1">
           <span className="font-extrabold text-[15px]">Overall</span>
-          <span className="text-[11px] text-subDim">
-            {allProfiles.length} member{allProfiles.length === 1 ? "" : "s"}
+          {allProfiles.length} member{allProfiles.length === 1 ? "" : "s"}
           </span>
         </div>
         <p className="text-[12px] text-sub">
