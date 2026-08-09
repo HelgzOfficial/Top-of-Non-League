@@ -12,6 +12,15 @@ type Props = {
   forceClosedGameweeks: { gameweek_id: string; number: number }[];
 };
 
+// How long past kickoff a fixture can go without a result before it counts
+// as "stuck" rather than just "hasn't finished/been entered yet" — a normal
+// non-league match plus stoppage time and a bit of admin lag fits well
+// inside this. Fixtures that simply haven't kicked off yet (the far more
+// common case for the current gameweek) never count as stuck, no matter
+// how many of them there are — that was the bug: treating "not played yet"
+// the same as "stuck" force-closed a gameweek that had barely started.
+const STUCK_AFTER_MS = 4 * 60 * 60 * 1000;
+
 export default function AdvanceGameweek({
   gameweekId,
   gameweekNumber,
@@ -23,7 +32,11 @@ export default function AdvanceGameweek({
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
 
-  const unplayed = fixtures.filter((f) => !f.result);
+  const now = Date.now();
+  const missingResult = fixtures.filter((f) => !f.result);
+  const stuck = missingResult.filter(
+    (f) => f.kickoff_at && new Date(f.kickoff_at).getTime() + STUCK_AFTER_MS < now
+  );
 
   async function handleForceClose() {
     setBusy(gameweekId);
@@ -50,7 +63,7 @@ export default function AdvanceGameweek({
     router.refresh();
   }
 
-  if (unplayed.length === 0 && forceClosedGameweeks.length === 0) {
+  if (stuck.length === 0 && forceClosedGameweeks.length === 0) {
     return null;
   }
 
@@ -58,14 +71,15 @@ export default function AdvanceGameweek({
     <div className="card !p-4 mb-6">
       <span className="font-extrabold text-[15px]">Gameweeks</span>
 
-      {unplayed.length > 0 && (
+      {stuck.length > 0 && (
         <div className="mt-2">
           <p className="text-[12px] text-sub">
-            Gameweek {gameweekNumber} is current, but {unplayed.length} fixture
-            {unplayed.length === 1 ? "" : "s"} still {unplayed.length === 1 ? "has" : "have"} no result:
-            </p>
+            Gameweek {gameweekNumber} is current, but {stuck.length} fixture
+            {stuck.length === 1 ? "" : "s"} kicked off over 4 hours ago and still{" "}
+            {stuck.length === 1 ? "has" : "have"} no result:
+          </p>
           <ul className="text-[12.5px] text-ink mt-1.5 mb-2.5 list-disc list-inside">
-            {unplayed.map((f) => (
+            {stuck.map((f) => (
               <li key={f.id}>
                 {f.home_team.name} vs {f.away_team.name}
               </li>
@@ -82,10 +96,10 @@ export default function AdvanceGameweek({
           ) : (
             <div className="rounded-smcard border border-lineHi p-3">
               <p className="text-[12px] text-sub mb-2.5">
-                Only do this if {unplayed.length === 1 ? "that fixture is" : "those fixtures are"} never
-                going to get a real result (postponed for good, abandoned, etc). Anyone who picked a team
-                still waiting on a result here won&apos;t score for this gameweek — and you can undo this
-                below if needed.
+                Only do this if {stuck.length === 1 ? "that fixture is" : "those fixtures are"} never
+                going to get a real result (postponed for good, abandoned, etc) — not just running late.
+                Anyone who picked a team still waiting on a result here won&apos;t score for this
+                gameweek — and you can undo this below if needed.
               </p>
               <div className="flex items-center gap-2.5">
                 <button
@@ -108,7 +122,7 @@ export default function AdvanceGameweek({
       )}
 
       {forceClosedGameweeks.length > 0 && (
-        <div className={unplayed.length > 0 ? "mt-4 pt-3 border-t border-line" : "mt-2"}>
+        <div className={stuck.length > 0 ? "mt-4 pt-3 border-t border-line" : "mt-2"}>
           <p className="text-[12px] text-sub mb-1.5">Manually moved past:</p>
           {forceClosedGameweeks.map((gw) => (
             <div key={gw.gameweek_id} className="flex items-center justify-between py-1.5 text-[13px]">
