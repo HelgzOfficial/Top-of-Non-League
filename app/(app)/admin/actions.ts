@@ -87,3 +87,59 @@ export async function setResult(
   }
   return { ok: true };
 }
+export type ForceCloseGameweekResponse = { ok: true } | { ok: false; error: string };
+
+/**
+ * Manually pushes the "current" gameweek forward past one that will never
+ * get a complete set of results (a permanently postponed/abandoned
+ * fixture) — the escape hatch for getCurrentGameweek() (lib/league.ts),
+ * which otherwise only advances once every fixture in a gameweek has a
+ * recorded result. Deliberately just inserts a marker row; never touches
+ * `results` or `standings`, so this can't affect anyone's score, only
+ * which gameweek people get to pick for.
+ */
+export async function forceCloseGameweek(gameweekId: string): Promise<ForceCloseGameweekResponse> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user || user.email?.toLowerCase() !== ADMIN_EMAIL) {
+    return { ok: false, error: "Not authorized" };
+  }
+
+  if (!gameweekId) {
+    return { ok: false, error: "Pick a gameweek" };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("gameweek_force_closes")
+    .upsert({ gameweek_id: gameweekId }, { onConflict: "gameweek_id" });
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+/** Undoes forceCloseGameweek() — puts a gameweek back into normal,
+ * results-driven advancement. */
+export async function reopenGameweek(gameweekId: string): Promise<ForceCloseGameweekResponse> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user || user.email?.toLowerCase() !== ADMIN_EMAIL) {
+    return { ok: false, error: "Not authorized" };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("gameweek_force_closes").delete().eq("gameweek_id", gameweekId);
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
