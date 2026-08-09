@@ -127,7 +127,8 @@ export default async function AdminPage() {
       <div className="card !p-4 mb-6">
         <div className="flex items-center justify-between mb-1">
           <span className="font-extrabold text-[15px]">Overall</span>
-          {allProfiles.length} member{allProfiles.length === 1 ? "" : "s"}
+          <span className="text-[11px] text-subDim">
+            {allProfiles.length} member{allProfiles.length === 1 ? "" : "s"}
           </span>
         </div>
         <p className="text-[12px] text-sub">
