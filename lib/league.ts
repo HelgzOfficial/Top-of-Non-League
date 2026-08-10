@@ -96,12 +96,14 @@ export async function getForceClosedGameweeks(
       closes.map((c) => c.gameweek_id)
     );
 
- const numberById = new Map((gameweeks ?? []).map((g) => [g.id, g.number]));
+const numberById = new Map((gameweeks ?? []).map((g) => [g.id, g.number]));
   return closes
     .map((c) => ({ gameweek_id: c.gameweek_id, number: numberById.get(c.gameweek_id) ?? 0 }))
     .sort((a, b) => a.number - b.number);
 }
-}
+
+/**
+ * Every gameweek for the league, in order — used to populate the "Set
 
 /**
  * Every gameweek for the league, in order — used to populate the "Set
