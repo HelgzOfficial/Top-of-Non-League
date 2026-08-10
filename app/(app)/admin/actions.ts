@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ingestResults, type IngestResultSummary } from "@/lib/ingestResults";
+import { LEAGUE_SLUG } from "@/lib/types";
 
 const ADMIN_EMAIL = "helgzofficial@gmail.com";
 
@@ -137,6 +138,59 @@ export async function reopenGameweek(gameweekId: string): Promise<ForceCloseGame
 
   const admin = createAdminClient();
   const { error } = await admin.from("gameweek_force_closes").delete().eq("gameweek_id", gameweekId);
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+export type SetGameweekOverrideResponse = { ok: true } | { ok: false; error: string };
+
+/**
+ * The direct "set the current gameweek to N" control — bypasses
+ * getCurrentGameweek()'s force-close/auto-detect logic entirely. Once set,
+ * every page that calls getCurrentGameweek() (Pick, Home) shows exactly
+ * this gameweek, regardless of what state any fixture's results are in.
+ */
+export async function setGameweekOverride(gameweekId: string): Promise<SetGameweekOverrideResponse> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user || user.email?.toLowerCase() !== ADMIN_EMAIL) {
+    return { ok: false, error: "Not authorized" };
+  }
+
+  if (!gameweekId) {
+    return { ok: false, error: "Pick a gameweek" };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("gameweek_override")
+    .upsert({ league_slug: LEAGUE_SLUG, gameweek_id: gameweekId }, { onConflict: "league_slug" });
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+/** Clears the manual override — goes back to normal, results-driven
+ * auto-detection of the current gameweek. */
+export async function clearGameweekOverride(): Promise<SetGameweekOverrideResponse> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user || user.email?.toLowerCase() !== ADMIN_EMAIL) {
+    return { ok: false, error: "Not authorized" };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("gameweek_override").delete().eq("league_slug", LEAGUE_SLUG);
 
   if (error) {
     return { ok: false, error: error.message };
