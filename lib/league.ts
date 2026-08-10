@@ -98,11 +98,49 @@ export async function getForceClosedGameweeks(
 
   const numberById = new Map((gameweeks ?? []).map((g) => [g.id, g.number]));
   return closes
+    return closes
     .map((c) => ({ gameweek_id: c.gameweek_id, number: numberById.get(c.gameweek_id) ?? 0 }))
     .sort((a, b) => a.number - b.number);
 }
 
-export async function getFixturesForGameweek(
+/**
+ * Every gameweek for the league, in order — used to populate the "Set
+ * gameweek to…" dropdown on the Admin dashboard.
+ */
+export async function getAllGameweeks(supabase: SupabaseClient): Promise<Gameweek[]> {
+  const { data } = await supabase
+    .from("gameweeks")
+    .select("*")
+    .eq("league_slug", LEAGUE_SLUG)
+    .order("number", { ascending: true });
+  return data ?? [];
+}
+
+/**
+ * The currently-set manual gameweek override, if any, with its gameweek
+ * number resolved for display — null when nothing is overridden (i.e. the
+ * app is showing the auto-detected current gameweek).
+ */
+export async function getGameweekOverride(
+  supabase: SupabaseClient
+): Promise<{ gameweek_id: string; number: number } | null> {
+  const { data: override } = await supabase
+    .from("gameweek_override")
+    .select("gameweek_id")
+    .eq("league_slug", LEAGUE_SLUG)
+    .maybeSingle();
+  if (!override?.gameweek_id) return null;
+
+  const { data: gw } = await supabase
+    .from("gameweeks")
+    .select("number")
+    .eq("id", override.gameweek_id)
+    .maybeSingle();
+  if (!gw) return null;
+  return { gameweek_id: override.gameweek_id, number: gw.number };
+}
+
+export async function getFixturesForGameweek((
   supabase: SupabaseClient,
   gameweekId: string
 ): Promise<FixtureWithTeamsAndResult[]> {
