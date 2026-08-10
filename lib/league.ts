@@ -96,11 +96,11 @@ export async function getForceClosedGameweeks(
       closes.map((c) => c.gameweek_id)
     );
 
-  const numberById = new Map((gameweeks ?? []).map((g) => [g.id, g.number]));
+ const numberById = new Map((gameweeks ?? []).map((g) => [g.id, g.number]));
   return closes
-    return closes
     .map((c) => ({ gameweek_id: c.gameweek_id, number: numberById.get(c.gameweek_id) ?? 0 }))
     .sort((a, b) => a.number - b.number);
+}
 }
 
 /**
@@ -140,7 +140,7 @@ export async function getGameweekOverride(
   return { gameweek_id: override.gameweek_id, number: gw.number };
 }
 
-export async function getFixturesForGameweek((
+export async function getFixturesForGameweek(
   supabase: SupabaseClient,
   gameweekId: string
 ): Promise<FixtureWithTeamsAndResult[]> {
