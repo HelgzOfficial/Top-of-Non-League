@@ -79,10 +79,12 @@ export default async function AdminPage() {
     leagueMembers[l.id] = members ?? [];
   }
 
-  const currentGameweek = await getCurrentGameweek(supabase);
-  const [currentGameweekFixtures, forceClosedGameweeks] = await Promise.all([
+const currentGameweek = await getCurrentGameweek(supabase);
+  const [currentGameweekFixtures, forceClosedGameweeks, allGameweeks, gameweekOverride] = await Promise.all([
     currentGameweek ? getFixturesForGameweek(supabase, currentGameweek.id) : Promise.resolve([]),
     getForceClosedGameweeks(supabase),
+    getAllGameweeks(supabase),
+    getGameweekOverride(supabase),
   ]);
 
   return (
@@ -90,6 +92,11 @@ export default async function AdminPage() {
       <h1 className="text-xl font-extrabold mb-1">Admin</h1>
       <p className="text-[13px] text-sub mb-6">Everyone who&apos;s signed up, and every private league.</p>
 
+      <CurrentGameweekControl
+        allGameweeks={allGameweeks.map((gw) => ({ id: gw.id, number: gw.number }))}
+        currentNumber={currentGameweek?.number ?? null}
+        overrideActive={!!gameweekOverride}
+      />
       <PullResults />
       {currentGameweek && (
         <AdvanceGameweek
