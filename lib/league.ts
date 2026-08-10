@@ -26,6 +26,25 @@ import {
  * been picked against a real result.
  */
 export async function getCurrentGameweek(supabase: SupabaseClient): Promise<Gameweek | null> {
+  // A manual override always wins — set via the "Current gameweek" control
+  // on the Admin dashboard. When present, everything below (force-closes,
+  // auto-detection from results) is skipped entirely: the app shows exactly
+  // whatever gameweek the admin picked, full stop.
+  const { data: override } = await supabase
+    .from("gameweek_override")
+    .select("gameweek_id")
+    .eq("league_slug", LEAGUE_SLUG)
+    .maybeSingle();
+
+  if (override?.gameweek_id) {
+    const { data: overriddenGw } = await supabase
+      .from("gameweeks")
+      .select("*")
+      .eq("id", override.gameweek_id)
+      .maybeSingle();
+    if (overriddenGw) return overriddenGw;
+  }
+
   const [{ data: gameweeks, error }, { data: forceClosed }] = await Promise.all([
     supabase
       .from("gameweeks")
